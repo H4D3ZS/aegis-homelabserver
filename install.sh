@@ -22,11 +22,19 @@ echo "[1/11] Updating package repository and installing core tools..."
 apt-get update -y
 apt-get install -y --no-install-recommends \
     curl wget git git-lfs jq ufw nftables tlp tlp-rdw iw wireless-tools \
+    wpasupplicant network-manager linux-firmware \
     sqlite3 openjdk-21-jre-headless build-essential python3 python3-pip python3-venv \
     ntfs-3g smartmontools rsync
 
-# --- 2. TECLAST LAPTOP HARDWARE & POWER TUNING ---
-echo "[2/11] Hardening power management, display blanking, and battery limits..."
+# --- 2. TECLAST LAPTOP WI-FI FIRMWARE & HARDENING ---
+echo "[2/11] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
+
+# Detect Wireless Interface Name (wlan0, wlp1s0, wlp2s0, etc.)
+WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
+if [ -z "$WIFI_IFACE" ]; then
+    WIFI_IFACE=$(ip link 2>/dev/null | awk -F': ' '/wl/{print $2}' | head -n 1 || echo "wlan0")
+fi
+echo "Detected Wi-Fi Interface: ${WIFI_IFACE}"
 
 # Prevent laptop from suspending when lid is closed or idle (Keep lid open for thermal convection)
 mkdir -p /etc/systemd/logind.conf.d/
@@ -152,7 +160,7 @@ systemctl enable --now cloudflared || true
 echo "[7/11] Installing Pi-hole (Native Bare-Metal) & SafeSearch CNAMEs..."
 mkdir -p /etc/pihole /etc/dnsmasq.d
 cat <<EOF > /etc/pihole/setupVars.conf
-PIHOLE_INTERFACE=wlan0
+PIHOLE_INTERFACE=${WIFI_IFACE}
 IPV4_ADDRESS=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || echo "192.168.100.81")/24
 IPV6_ADDRESS=
 PIHOLE_DNS_1=127.0.0.1#5053
