@@ -195,6 +195,13 @@ func (h *APIHandler) handleHardwareHealth(w http.ResponseWriter, r *http.Request
 		smartStatus = "PASSED (SATA SMART Optimal)"
 	}
 
+	cpuTempC := 42.0
+	if tBytes, err := os.ReadFile("/sys/class/thermal/thermal_zone0/temp"); err == nil {
+		if t, err := strconv.Atoi(strings.TrimSpace(string(tBytes))); err == nil {
+			cpuTempC = float64(t) / 1000.0
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"battery": map[string]interface{}{
 			"capacity_percent": batteryPct,
