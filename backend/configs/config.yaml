@@ -1,0 +1,30 @@
+# Aegis Sentinel Configuration
+server:
+  port: "3001"
+  db_path: "/var/lib/pi-sentinel/sentinel.db"
+  log_path: "/var/log/pihole/pihole.log"
+  safesearch_conf: "/etc/dnsmasq.d/05-safesearch.conf"
+  pihole_bin: "/usr/local/bin/pihole"
+
+router_automation:
+  enabled: true
+  gateway_url: "http://192.168.100.1"
+  username: "root"
+  password: "admin 123"
+  router_type: "huawei_ont"
+  auto_heal: true
+  heal_timeout_sec: 120
+
+isp_watchdog:
+  sla_download_mbps: 500.0
+  sla_upload_mbps: 100.0
+  isp_name: "Converge ICT FiberX"
+  ping_targets:
+    - "1.1.1.1:53"
+    - "8.8.8.8:53"
+    - "192.168.100.1:53"
+
+alerts:
+  discord_webhook: ""
+  telegram_token: ""
+  telegram_chat_id: ""
