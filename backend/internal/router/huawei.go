@@ -25,6 +25,54 @@ type RouterConfig struct {
 	HealTimeoutSec int
 }
 
+// LANPortStatus represents physical Ethernet port states on the ONT.
+type LANPortStatus struct {
+	PortName    string `json:"port_name"`
+	Status      string `json:"status"`       // "Connected" or "Disconnected"
+	SpeedDuplex string `json:"speed_duplex"` // "1000 Mbps Full Duplex" or "Down"
+	ConnectedTo string `json:"connected_to"`
+}
+
+// WiFiRadioInfo contains 2.4GHz and 5GHz Wi-Fi 6 telemetry.
+type WiFiRadioInfo struct {
+	Band           string `json:"band"` // "2.4GHz" or "5GHz"
+	Protocol       string `json:"protocol"` // "Wi-Fi 6 (802.11ax)"
+	SSID           string `json:"ssid"`
+	Channel        string `json:"channel"`
+	Bandwidth      string `json:"bandwidth"` // "20MHz" or "80MHz"
+	TxPower        string `json:"tx_power"`
+	ActiveClients  int    `json:"active_clients"`
+	NoiseFloorDBm  int    `json:"noise_floor_dbm"`
+}
+
+// GPONOpticalInfo details the physical fiber glass link and SFP/BOSA transceiver.
+type GPONOpticalInfo struct {
+	PONState            string  `json:"pon_state"` // "O5 (Operational / Authenticated)"
+	GPONSerialNumber    string  `json:"gpon_serial_number"`
+	RxOpticalPowerDBm   float64 `json:"rx_optical_power_dbm"`
+	TxOpticalPowerDBm   float64 `json:"tx_optical_power_dbm"`
+	OpticalVoltageV     float64 `json:"optical_voltage_v"`
+	BiasCurrentMA       float64 `json:"bias_current_ma"`
+	TemperatureC        float64 `json:"temperature_c"`
+	DownstreamWaveNm    int     `json:"downstream_wave_nm"` // 1490 nm
+	UpstreamWaveNm      int     `json:"upstream_wave_nm"`   // 1310 nm
+	FECBlocksCorrected  int64   `json:"fec_blocks_corrected"`
+	FECErrorsUncorrect  int64   `json:"fec_errors_uncorrect"`
+}
+
+// WANRouteInfo details ISP routing, NAT sessions, and IP addressing.
+type WANRouteInfo struct {
+	WANIPv4            string `json:"wan_ipv4"`
+	WANIPv6Prefix      string `json:"wan_ipv6_prefix"`
+	ConnectionMode     string `json:"connection_mode"` // "IPoE (DHCP) / CGNAT"
+	PrimaryDNS         string `json:"primary_dns"`
+	SecondaryDNS       string `json:"secondary_dns"`
+	MTU                int    `json:"mtu"`
+	ActiveNATSessions  int    `json:"active_nat_sessions"`
+	MaxNATSessions     int    `json:"max_nat_sessions"`
+	NATUtilizationPct  float64 `json:"nat_utilization_pct"`
+}
+
 // RouterThermalHealth tracks optical laser temperature, transceiver health, and thermal throttle risks.
 type RouterThermalHealth struct {
 	TemperatureC         float64 `json:"temperature_c"`
@@ -41,7 +89,7 @@ type RouterThermalHealth struct {
 	DiagnosticAdvice     string  `json:"diagnostic_advice"`
 }
 
-// RouterStatus contains operational status of the fiber gateway.
+// RouterStatus contains comprehensive operational and hardware status of the fiber gateway.
 type RouterStatus struct {
 	IsConnected        bool                `json:"is_connected"`
 	WANIP              string              `json:"wan_ip"`
@@ -52,7 +100,13 @@ type RouterStatus struct {
 	LastRebootTime     time.Time           `json:"last_reboot_time"`
 	AutoHealActive     bool                `json:"auto_heal_active"`
 	RouterModel        string              `json:"router_model"`
+	HardwareVersion    string              `json:"hardware_version"`
+	FirmwareVersion    string              `json:"firmware_version"`
 	ThermalHealth      RouterThermalHealth `json:"thermal_health"`
+	GPONInfo           GPONOpticalInfo     `json:"gpon_info"`
+	WANInfo            WANRouteInfo        `json:"wan_info"`
+	WiFiRadios         []WiFiRadioInfo     `json:"wifi_radios"`
+	LANPorts           []LANPortStatus     `json:"lan_ports"`
 }
 
 // HuaweiDriver implements the 3-step token challenge handshake for Huawei OptiXstar ONT.
@@ -140,7 +194,6 @@ func (d *HuaweiDriver) ScrapeThermalAndOptical(ctx context.Context) RouterTherma
 		DiagnosticAdvice:   "Router operating within safe thermal range (<60°C). Full 500 Mbps bandwidth available.",
 	}
 
-	// Try probing optical info endpoint
 	optURL := fmt.Sprintf("%s/html/bbsp/opticinfo/opticinfo.asp", d.gatewayURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, optURL, nil)
 	if err == nil {
@@ -165,7 +218,6 @@ func (d *HuaweiDriver) ScrapeThermalAndOptical(ctx context.Context) RouterTherma
 		}
 	}
 
-	// Evaluate Thermal Status
 	if health.TemperatureC >= 68.0 {
 		health.ThermalStatus = "CRITICAL_OVERHEAT (>68°C)"
 		health.ThermalWarning = true

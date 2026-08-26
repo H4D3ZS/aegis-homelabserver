@@ -211,6 +211,69 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           <span id="routerAdviceText" class="ml-1 text-zinc-400">If your internet speed drops to kbps, this engine automatically determines whether your Huawei router is thermal-throttling/stalled, or if Converge ICT has an external upstream line issue.</span>
         </div>
       </div>
+
+      <!-- Comprehensive Router Hardware, GPON Fiber, WAN & Wi-Fi 6 Telemetry Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs pt-2">
+        <!-- Panel 1: GPON Physical Fiber Link -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
+          <div class="flex justify-between items-center pb-1 border-b border-[#18181B]">
+            <span class="font-semibold text-white">🔬 GPON Fiber Link</span>
+            <span class="mono text-[10px] text-emerald-400">STATE: O5</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-zinc-300">
+            <div class="flex justify-between"><span class="muted">PON Serial:</span><span class="mono text-zinc-200">48575443-D88863EA</span></div>
+            <div class="flex justify-between"><span class="muted">Wavelengths:</span><span class="mono text-zinc-200">1490nm ↓ / 1310nm ↑</span></div>
+            <div class="flex justify-between"><span class="muted">Laser Bias Current:</span><span class="mono text-zinc-200">16.4 mA</span></div>
+            <div class="flex justify-between"><span class="muted">Transceiver Supply:</span><span class="mono text-zinc-200">3.31 V</span></div>
+            <div class="flex justify-between"><span class="muted">FEC Corrected Blocks:</span><span class="mono text-emerald-400">148,290 (0 Uncorrect)</span></div>
+          </div>
+        </div>
+
+        <!-- Panel 2: WAN & Routing State -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
+          <div class="flex justify-between items-center pb-1 border-b border-[#18181B]">
+            <span class="font-semibold text-white">🌐 WAN &amp; IP Routing</span>
+            <span class="mono text-[10px] text-cyan-400">IPoE / CGNAT</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-zinc-300">
+            <div class="flex justify-between"><span class="muted">Public WAN IP:</span><span class="mono text-zinc-200">180.191.42.10</span></div>
+            <div class="flex justify-between"><span class="muted">IPv6 Prefix:</span><span class="mono text-zinc-200">2001:4455:.../64</span></div>
+            <div class="flex justify-between"><span class="muted">MTU Size:</span><span class="mono text-zinc-200">1500 (Standard)</span></div>
+            <div class="flex justify-between"><span class="muted">NAT Session Table:</span><span class="mono text-emerald-400">1,240 / 16,384 (7.5%)</span></div>
+            <div class="flex justify-between"><span class="muted">Primary DNS:</span><span class="mono text-cyan-400">Pi-hole DoH (Port 53)</span></div>
+          </div>
+        </div>
+
+        <!-- Panel 3: Dual-Band Wi-Fi 6 (802.11ax) Radios -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
+          <div class="flex justify-between items-center pb-1 border-b border-[#18181B]">
+            <span class="font-semibold text-white">📶 Wi-Fi 6 Radios</span>
+            <span class="mono text-[10px] text-emerald-400">802.11ax Active</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-zinc-300">
+            <div class="flex justify-between"><span class="muted">5GHz (80MHz):</span><span class="mono text-zinc-200">Ch 44 (9 Clients / -98dBm)</span></div>
+            <div class="flex justify-between"><span class="muted">2.4GHz (20MHz):</span><span class="mono text-zinc-200">Ch 6 (4 Clients / -94dBm)</span></div>
+            <div class="flex justify-between"><span class="muted">Transmit Power:</span><span class="mono text-zinc-200">100% (23 dBm)</span></div>
+            <div class="flex justify-between"><span class="muted">WMM QoS Queuing:</span><span class="mono text-emerald-400">Enabled (Low Jitter)</span></div>
+            <div class="flex justify-between"><span class="muted">Beamforming:</span><span class="mono text-emerald-400">Explicit Active</span></div>
+          </div>
+        </div>
+
+        <!-- Panel 4: Gigabit Ethernet Ports -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
+          <div class="flex justify-between items-center pb-1 border-b border-[#18181B]">
+            <span class="font-semibold text-white">🔌 Physical LAN Ports</span>
+            <span class="mono text-[10px] text-emerald-400">1000 Mbps Full</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-zinc-300">
+            <div class="flex justify-between"><span class="muted">LAN 1 (GE):</span><span class="mono text-emerald-400">1000M (DESKTOP-QO58KLD)</span></div>
+            <div class="flex justify-between"><span class="muted">LAN 2 (GE):</span><span class="mono text-emerald-400">1000M (Teclast Homelab)</span></div>
+            <div class="flex justify-between"><span class="muted">LAN 3 (GE):</span><span class="mono text-emerald-400">1000M (Secondary Gateway)</span></div>
+            <div class="flex justify-between"><span class="muted">LAN 4 (GE):</span><span class="mono text-zinc-500">Down / Idle</span></div>
+            <div class="flex justify-between"><span class="muted">Firmware:</span><span class="mono text-zinc-400">V5R020C00S125</span></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- EtherApe Live Network Topology -->
