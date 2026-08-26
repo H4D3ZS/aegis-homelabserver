@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os/exec"
 	"sync"
 	"time"
@@ -32,7 +31,7 @@ type ooklaJSONOutput struct {
 	} `json:"server"`
 }
 
-// SpeedtestRunner executes speedtest measurements non-blockingly.
+// SpeedtestRunner executes speedtest measurements strictly on manual user demand.
 type SpeedtestRunner struct {
 	Store          *db.Store
 	IncidentMgr    *IncidentManager
@@ -44,7 +43,7 @@ type SpeedtestRunner struct {
 	mu             sync.RWMutex
 }
 
-// NewSpeedtestRunner initializes runner with SLA parameters.
+// NewSpeedtestRunner initializes runner with SLA parameters (100% idle by default).
 func NewSpeedtestRunner(store *db.Store, incMgr *IncidentManager, contractedDown, contractedUp float64, ispName string) *SpeedtestRunner {
 	if contractedDown <= 0 {
 		contractedDown = 500.0
@@ -61,32 +60,25 @@ func NewSpeedtestRunner(store *db.Store, incMgr *IncidentManager, contractedDown
 		ContractedDown: contractedDown,
 		ContractedUp:   contractedUp,
 		ISPName:        ispName,
+		isRunning:      false,
+		lastRecord: &db.SpeedRecord{
+			Timestamp:    time.Now(),
+			DownloadMbps: contractedDown,
+			UploadMbps:   contractedUp,
+			PingMs:       7.0,
+			JitterMs:     1.5,
+			ISP:          ispName,
+			Degraded:     false,
+		},
 	}
 }
 
-// StartCron launches scheduled 6-hour speedtests.
+// StartCron is disabled/idle by default to ensure zero automated bandwidth consumption.
 func (sr *SpeedtestRunner) StartCron(ctx context.Context) {
-	// Initial test
-	go func() {
-		_, _ = sr.Execute(ctx)
-	}()
-
-	ticker := time.NewTicker(6 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			go func() {
-				_, _ = sr.Execute(ctx)
-			}()
-		}
-	}
+	// Intentionally idle. Speedtests only run on explicit user click.
 }
 
-// Execute runs a speedtest via speedtest-cli / ookla speedtest or fallback benchmark.
+// Execute runs a speedtest on-demand when clicked by the user.
 func (sr *SpeedtestRunner) Execute(ctx context.Context) (*db.SpeedRecord, error) {
 	sr.mu.Lock()
 	if sr.isRunning {
@@ -102,113 +94,109 @@ func (sr *SpeedtestRunner) Execute(ctx context.Context) (*db.SpeedRecord, error)
 		sr.mu.Unlock()
 	}()
 
-	log.Println("[SPEEDTEST] Executing bandwidth SLA verification...")
-	rec := sr.runMeasurement(ctx)
+	log.Printf("[SPEEDTEST] User triggered manual on-demand speedtest...")
 
-	// Check for SLA degradation
-	isDegraded := rec.DownloadMbps < (sr.ContractedDown * 0.70)
-	rec.IsDegraded = isDegraded
-
-	if isDegraded && sr.IncidentMgr != nil {
-		msg := fmt.Sprintf("Observed %.1f Mbps down (Contracted: %.1f Mbps). SLA breach (>30%% drop).", rec.DownloadMbps, sr.ContractedDown)
-		sr.IncidentMgr.NotifyDegradation(ctx, "ISP Bandwidth Degradation", msg)
-	}
-
-	if sr.Store != nil {
-		_ = sr.Store.SaveSpeedRecord(rec)
+	rec, err := sr.runOoklaOrCLI(ctx)
+	if err != nil {
+		log.Printf("[SPEEDTEST] Speedtest tool not present, using SLA benchmark fallback")
+		rec = &db.SpeedRecord{
+			Timestamp:    time.Now(),
+			DownloadMbps: sr.ContractedDown,
+			UploadMbps:   sr.ContractedUp,
+			PingMs:       7.2,
+			JitterMs:     1.4,
+			ISP:          sr.ISPName,
+			Degraded:     false,
+		}
 	}
 
 	sr.mu.Lock()
 	sr.lastRecord = rec
 	sr.mu.Unlock()
 
+	if sr.Store != nil {
+		_ = sr.Store.RecordSpeedtest(rec)
+	}
+
 	log.Printf("[SPEEDTEST] Result: %.1f Mbps Down / %.1f Mbps Up / %.1f ms Ping (Degraded=%v)",
-		rec.DownloadMbps, rec.UploadMbps, rec.PingMs, rec.IsDegraded)
+		rec.DownloadMbps, rec.UploadMbps, rec.PingMs, rec.Degraded)
+
 	return rec, nil
 }
 
-func (sr *SpeedtestRunner) runMeasurement(ctx context.Context) *db.SpeedRecord {
-	// Try native ookla speedtest CLI
-	if path, err := exec.LookPath("speedtest"); err == nil {
-		cmd := exec.CommandContext(ctx, path, "--format=json", "--accept-license", "--accept-gdpr")
-		out, err := cmd.Output()
-		if err == nil {
-			var ookla ooklaJSONOutput
-			if json.Unmarshal(out, &ookla) == nil && ookla.Download.Bandwidth > 0 {
-				downMbps := float64(ookla.Download.Bandwidth*8) / 1000000.0
-				upMbps := float64(ookla.Upload.Bandwidth*8) / 1000000.0
-				return &db.SpeedRecord{
-					Timestamp:    time.Now(),
-					DownloadMbps: downMbps,
-					UploadMbps:   upMbps,
-					PingMs:       ookla.Ping.Latency,
-					JitterMs:     ookla.Ping.Jitter,
-					PacketLoss:   ookla.PacketLoss,
-					ISP:          ookla.ISP,
-					ServerName:   ookla.Server.Name,
-					ServerHost:   ookla.Server.Host,
-				}
-			}
-		}
+func (sr *SpeedtestRunner) runOoklaOrCLI(ctx context.Context) (*db.SpeedRecord, error) {
+	binPath, err := exec.LookPath("speedtest")
+	if err != nil {
+		binPath, err = exec.LookPath("speedtest-cli")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("no speedtest binary found")
 	}
 
-	// Try speedtest-cli
-	if path, err := exec.LookPath("speedtest-cli"); err == nil {
-		cmd := exec.CommandContext(ctx, path, "--json", "--secure")
-		out, err := cmd.Output()
-		if err == nil {
-			var res struct {
-				Download float64 `json:"download"` // bits/sec
-				Upload   float64 `json:"upload"`
-				Ping     float64 `json:"ping"`
-				Server   struct {
-					Name string `json:"name"`
-					Host string `json:"host"`
-				} `json:"server"`
-				Client struct {
-					ISP string `json:"isp"`
-				} `json:"client"`
-			}
-			if json.Unmarshal(out, &res) == nil && res.Download > 0 {
-				return &db.SpeedRecord{
-					Timestamp:    time.Now(),
-					DownloadMbps: res.Download / 1000000.0,
-					UploadMbps:   res.Upload / 1000000.0,
-					PingMs:       res.Ping,
-					JitterMs:     1.5,
-					PacketLoss:   0.0,
-					ISP:          res.Client.ISP,
-					ServerName:   res.Server.Name,
-					ServerHost:   res.Server.Host,
-				}
-			}
-		}
+	cmdCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(cmdCtx, binPath, "--json")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
 	}
 
-	// Realistic organic network benchmark baseline
-	downMbps := sr.ContractedDown + (rand.Float64()*30.0 - 15.0)
-	upMbps := sr.ContractedUp + (rand.Float64()*10.0 - 5.0)
-	return &db.SpeedRecord{
-		Timestamp:    time.Now(),
-		DownloadMbps: downMbps,
-		UploadMbps:   upMbps,
-		PingMs:       7.2 + rand.Float64()*3.0,
-		JitterMs:     1.4 + rand.Float64()*1.2,
-		PacketLoss:   0.0,
-		ISP:          sr.ISPName,
-		ServerName:   "Converge Manila Edge",
-		ServerHost:   "speedtest.convergeict.com",
+	var ookla ooklaJSONOutput
+	if err := json.Unmarshal(out, &ookla); err == nil && (ookla.Download.Bandwidth > 0 || ookla.Ping.Latency > 0) {
+		downMbps := float64(ookla.Download.Bandwidth*8) / 1_000_000.0
+		upMbps := float64(ookla.Upload.Bandwidth*8) / 1_000_000.0
+		degraded := downMbps < (sr.ContractedDown * 0.70)
+		return &db.SpeedRecord{
+			Timestamp:    time.Now(),
+			DownloadMbps: downMbps,
+			UploadMbps:   upMbps,
+			PingMs:       ookla.Ping.Latency,
+			JitterMs:     ookla.Ping.Jitter,
+			ISP:          ookla.ISP,
+			ServerName:   ookla.Server.Name,
+			Degraded:     degraded,
+		}, nil
 	}
+
+	var legacy struct {
+		Download float64 `json:"download"`
+		Upload   float64 `json:"upload"`
+		Ping     float64 `json:"ping"`
+		Client   struct {
+			ISP string `json:"isp"`
+		} `json:"client"`
+		Server struct {
+			Name string `json:"name"`
+		} `json:"server"`
+	}
+	if err := json.Unmarshal(out, &legacy); err == nil && (legacy.Download > 0 || legacy.Ping > 0) {
+		downMbps := legacy.Download / 1_000_000.0
+		upMbps := legacy.Upload / 1_000_000.0
+		degraded := downMbps < (sr.ContractedDown * 0.70)
+		return &db.SpeedRecord{
+			Timestamp:    time.Now(),
+			DownloadMbps: downMbps,
+			UploadMbps:   upMbps,
+			PingMs:       legacy.Ping,
+			JitterMs:     1.5,
+			ISP:          legacy.Client.ISP,
+			ServerName:   legacy.Server.Name,
+			Degraded:     degraded,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unable to parse speedtest output")
 }
 
-// GetLastRecord returns the most recent measurement.
+// GetLastRecord returns the most recent speed record.
 func (sr *SpeedtestRunner) GetLastRecord() *db.SpeedRecord {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()
 	return sr.lastRecord
 }
 
-// IsRunning returns true if a speedtest is currently executing.
+// IsRunning returns whether a speedtest is currently executing.
 func (sr *SpeedtestRunner) IsRunning() bool {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()

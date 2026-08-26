@@ -92,20 +92,19 @@ func main() {
 	}
 	routerClient := router.NewRouterClient(routerCfg)
 
-	// 6. ISP Prober & Speedtest Watchdog
+	// 6. ISP Prober & Speedtest Watchdog (Strictly On-Demand Manual Execution)
 	pinger := isp.NewPinger([]string{"1.1.1.1:53", "8.8.8.8:53", "192.168.100.1:53"})
 	speedtest := isp.NewSpeedtestRunner(store, nil, *slaDown, *slaUp, *ispName)
 
 	// 7. Real-Time SSE Hub
 	sseHub := handler.NewSSEHub(pinger, speedtest)
 
-	// 8. Start Background Watchdogs
+	// 8. Start Background Watchdogs (Zero automated speedtests)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go sseHub.Run()
 	go pinger.Start(ctx)
-	go speedtest.StartCron(ctx)
 	_ = tailer.Start(ctx)
 
 	// Threat Neutralization Loop
@@ -163,7 +162,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	log.Printf("[AEGIS-SENTINEL] Sentinel Core live on http://0.0.0.0:%s", *port)
+	log.Printf("[AEGIS-SENTINEL] Sentinel Core live on http://0.0.0.0:%s (Speedtest 100%% Idle/Manual-Only)", *port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("[SERVER] Fatal HTTP server error: %v", err)
 	}
