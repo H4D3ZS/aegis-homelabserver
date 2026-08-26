@@ -107,7 +107,7 @@ echo "[+] Installing core utilities, power tools, and storage packages..."
 apt-get install -y --fix-broken || true
 apt-get install -y \
     curl wget git git-lfs jq ufw nftables tlp tlp-rdw iw wireless-tools \
-    wpasupplicant network-manager linux-firmware acpi upower \
+    wpasupplicant network-manager linux-firmware acpi upower nvme-cli \
     sqlite3 build-essential ntfs-3g smartmontools rsync samba
 
 # Install Java 21 & Python 3
