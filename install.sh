@@ -486,16 +486,22 @@ systemctl daemon-reload
 systemctl enable --now minecraft.service || true
 
 # --- 12. CRAFTY CONTROLLER 4 (MINECRAFT WEB GUI) ---
-echo "[12/15] Provisioning Crafty Controller 4 Web Management GUI..."
+echo "[12/15] Provisioning Crafty Controller 4 Web Management GUI on Port 8443..."
 mkdir -p /opt/crafty/app/config
-if [ -d "/opt/crafty" ]; then
+
+if [ ! -f "/opt/crafty/main.py" ]; then
+    echo "[+] Downloading and deploying Crafty Controller 4..."
     if [ -d "./crafty-4" ]; then
         cp -r ./crafty-4/* /opt/crafty/ || true
     elif [ -d "../crafty-4" ]; then
         cp -r ../crafty-4/* /opt/crafty/ || true
+    else
+        git clone --depth 1 https://gitlab.com/crafty-controller/crafty-4.git /opt/crafty || \
+        git clone --depth 1 https://github.com/crafty-controller/crafty-4.git /opt/crafty || true
     fi
+fi
 
-    cat << 'EOF' > /opt/crafty/app/config/default-creds.txt
+cat << 'EOF' > /opt/crafty/app/config/default-creds.txt
 {
     "username": "admin",
     "password": "Programming123",
@@ -503,13 +509,14 @@ if [ -d "/opt/crafty" ]; then
 }
 EOF
 
+if [ -f "/opt/crafty/requirements.txt" ]; then
+    echo "[+] Setting up Python virtual environment for Crafty 4..."
     python3 -m venv /opt/crafty/.venv || true
-    if [ -f "/opt/crafty/requirements.txt" ]; then
-        /opt/crafty/.venv/bin/pip install --quiet -r /opt/crafty/requirements.txt || true
-    fi
-
-    chown -R minecraft:minecraft /opt/crafty
+    /opt/crafty/.venv/bin/pip install --quiet --upgrade pip setuptools wheel || true
+    /opt/crafty/.venv/bin/pip install --quiet -r /opt/crafty/requirements.txt || true
 fi
+
+chown -R minecraft:minecraft /opt/crafty || true
 
 cat <<EOF > /etc/systemd/system/crafty.service
 [Unit]
