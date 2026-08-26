@@ -19,6 +19,81 @@ echo "============================================================"
 echo "    [+] INITIATING AEGIS HOMELAB NATIVE SERVER PROVISIONING "
 echo "============================================================"
 
+# --- INTERACTIVE STORAGE SELECTION ---
+echo ""
+echo "============================================================"
+echo " [?] SELECT STORAGE ALLOCATION STRATEGY FOR YOUR SERVICES:"
+echo "============================================================"
+echo " [1] HYBRID / OPTIMAL (Recommended):"
+echo "     • Internal 256GB SSD: Fast Minecraft World Chunks & Databases (Max FPS)"
+echo "     • External 1TB HDD:   Gitea Repositories, Anime Library & Torrents"
+echo ""
+echo " [2] INTERNAL SSD ONLY (256GB Fast NVMe/SATA):"
+echo "     • Store everything on internal 256GB drive (/var/lib/aegis-data)"
+echo ""
+echo " [3] EXTERNAL 1TB DRIVE ONLY (/mnt/external_1tb):"
+echo "     • Store all services and data on the 1TB enclosure"
+echo ""
+echo " [4] CUSTOM PATH:"
+echo "     • Specify your own custom storage directories"
+echo "============================================================"
+
+STORAGE_CHOICE=""
+if [ -t 0 ]; then
+    read -p "Enter choice [1-4] (Default: 1): " STORAGE_CHOICE || true
+fi
+STORAGE_CHOICE="${STORAGE_CHOICE:-1}"
+
+GITEA_DATA_DIR="/mnt/external_1tb/gitea-data"
+MEDIA_DIR="/mnt/external_1tb/media"
+MINECRAFT_DATA_DIR="/opt/minecraft"
+BACKUP_DIR="/mnt/external_1tb/minecraft-backups"
+
+case "$STORAGE_CHOICE" in
+    1)
+        echo "[+] Selected: HYBRID (Internal SSD for Minecraft DBs + 1TB for Gitea/Media)"
+        GITEA_DATA_DIR="/mnt/external_1tb/gitea-data"
+        MEDIA_DIR="/mnt/external_1tb/media"
+        MINECRAFT_DATA_DIR="/opt/minecraft"
+        BACKUP_DIR="/mnt/external_1tb/minecraft-backups"
+        ;;
+    2)
+        echo "[+] Selected: INTERNAL 256GB SSD ONLY"
+        GITEA_DATA_DIR="/var/lib/aegis-data/gitea"
+        MEDIA_DIR="/var/lib/aegis-data/media"
+        MINECRAFT_DATA_DIR="/var/lib/aegis-data/minecraft"
+        BACKUP_DIR="/var/lib/aegis-data/backups"
+        ;;
+    3)
+        echo "[+] Selected: EXTERNAL 1TB HDD ONLY"
+        GITEA_DATA_DIR="/mnt/external_1tb/gitea-data"
+        MEDIA_DIR="/mnt/external_1tb/media"
+        MINECRAFT_DATA_DIR="/mnt/external_1tb/minecraft"
+        BACKUP_DIR="/mnt/external_1tb/minecraft-backups"
+        ;;
+    4)
+        echo "[+] Custom Storage Configuration:"
+        read -p "Enter Gitea storage path (Default: /mnt/external_1tb/gitea-data): " CUSTOM_GITEA || true
+        read -p "Enter Media/Anime storage path (Default: /mnt/external_1tb/media): " CUSTOM_MEDIA || true
+        read -p "Enter Minecraft server path (Default: /opt/minecraft): " CUSTOM_MC || true
+        GITEA_DATA_DIR="${CUSTOM_GITEA:-/mnt/external_1tb/gitea-data}"
+        MEDIA_DIR="${CUSTOM_MEDIA:-/mnt/external_1tb/media}"
+        MINECRAFT_DATA_DIR="${CUSTOM_MC:-/opt/minecraft}"
+        BACKUP_DIR="${MEDIA_DIR}/backups"
+        ;;
+    *)
+        echo "[+] Defaulting to HYBRID mode."
+        ;;
+esac
+
+echo ""
+echo "-> Gitea Storage:     ${GITEA_DATA_DIR}"
+echo "-> Media & Anime:     ${MEDIA_DIR}"
+echo "-> Minecraft Server:  ${MINECRAFT_DATA_DIR}"
+echo "-> World Backups:     ${BACKUP_DIR}"
+echo "============================================================"
+sleep 2
+
 # --- 1. SYSTEM REPOSITORIES & DEPENDENCIES ---
 echo "[1/15] Enabling universe/multiverse repositories and installing core packages..."
 apt-get update -y
@@ -60,7 +135,6 @@ echo "nameserver 1.1.1.1" > /etc/resolv.conf
 # --- 3. TECLAST LAPTOP WI-FI FIRMWARE & HARDENING ---
 echo "[3/15] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
 
-# Detect Wireless Interface Name (wlan0, wlp1s0, wlp2s0, etc.)
 WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
 if [ -z "$WIFI_IFACE" ]; then
     WIFI_IFACE=$(ip link 2>/dev/null | awk -F': ' '/wl/{print $2}' | head -n 1 || echo "wlan0")
@@ -124,7 +198,7 @@ EOF
 systemctl enable --now battery-threshold.service || true
 systemctl enable --now tlp || true
 
-# Battery UPS Auto-Shutdown Watchdog Daemon (Safeguard 1TB Drive & DBs)
+# Battery UPS Auto-Shutdown Watchdog Daemon
 cat << 'EOF' > /usr/local/bin/aegis-ups-watchdog.sh
 #!/usr/bin/env bash
 for bat in /sys/class/power_supply/BAT*; do
@@ -132,10 +206,10 @@ for bat in /sys/class/power_supply/BAT*; do
         CAPACITY=$(cat "$bat/capacity")
         STATUS=$(cat "$bat/status")
         if [ "$STATUS" = "Discharging" ] && [ "$CAPACITY" -le 7 ]; then
-            logger -t aegis-ups "CRITICAL: Battery at ${CAPACITY}%. Initiating safe shutdown of 1TB drive & services."
+            logger -t aegis-ups "CRITICAL: Battery at ${CAPACITY}%. Initiating safe shutdown of services."
             systemctl stop minecraft crafty gitea jellyfin || true
             sync
-            umount -f /mnt/external_1tb || true
+            umount -f /mnt/external_1tb 2>/dev/null || true
             shutdown -h now "Battery critically low (${CAPACITY}%) during power outage."
         fi
     fi
@@ -180,20 +254,17 @@ net.ipv4.ip_forward = 1
 EOF
 sysctl --system || true
 
-# --- 5. EXTERNAL 1TB NTFS ENCLOSURE STORAGE MOUNT ---
-echo "[5/15] Configuring External 1TB NTFS Drive Mount (/mnt/external_1tb)..."
-mkdir -p /mnt/external_1tb /mnt/external_1tb/gitea-data /mnt/external_1tb/minecraft-backups /mnt/external_1tb/aegis-archive \
-         /mnt/external_1tb/media /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies /mnt/external_1tb/media/downloads \
-         /mnt/external_1tb/shared
+# --- 5. STORAGE DIRECTORIES INITIALIZATION ---
+echo "[5/15] Initializing chosen storage layout..."
+mkdir -p "${GITEA_DATA_DIR}/repositories" "${GITEA_DATA_DIR}/lfs" \
+         "${MEDIA_DIR}/anime" "${MEDIA_DIR}/movies" "${MEDIA_DIR}/downloads" \
+         "${MINECRAFT_DATA_DIR}" "${BACKUP_DIR}" /mnt/external_1tb
 
-# Find external NTFS drive partition if attached
+# Find and mount external NTFS drive if attached
 NTFS_DEV=$(lsblk -o NAME,FSTYPE -rn 2>/dev/null | grep -i "ntfs" | head -n 1 | awk '{print "/dev/" $1}' || echo "")
-
 if [ -n "$NTFS_DEV" ]; then
     echo "Detected NTFS Partition: ${NTFS_DEV}. Mounting to /mnt/external_1tb..."
-    mount -t ntfs-3g -o windows_names,big_writes,nofail,uid=1000,gid=1000,umask=022 "${NTFS_DEV}" /mnt/external_1tb || true
-    
-    # Add non-blocking safe fstab entry
+    mount -t ntfs-3g -o windows_names,big_writes,nofail,uid=1000,gid=1000,umask=022 "${NTFS_DEV}" /mnt/external_1tb 2>/dev/null || true
     if ! grep -q "/mnt/external_1tb" /etc/fstab; then
         UUID_VAL=$(blkid -s UUID -o value "${NTFS_DEV}" || echo "")
         if [ -n "$UUID_VAL" ]; then
@@ -204,10 +275,10 @@ fi
 
 # --- 6. SAMBA WINDOWS/MAC NETWORK FILE SHARING ---
 echo "[6/15] Configuring Samba Windows Network Drive (\\\\TECLAST\\Storage)..."
-cat << 'EOF' >> /etc/samba/smb.conf
-[Storage1TB]
-   comment = Aegis 1TB External Storage
-   path = /mnt/external_1tb
+cat << EOF >> /etc/samba/smb.conf
+[Storage]
+   comment = Aegis Homelab Storage
+   path = ${MEDIA_DIR}
    browseable = yes
    read only = no
    guest ok = yes
@@ -308,13 +379,13 @@ if command -v ufw &> /dev/null; then
 fi
 
 # --- 11. MINECRAFT FORGE SERVER (NATIVE MODDED 1.20.1 MULTIPLAYER) ---
-echo "[11/15] Provisioning native Minecraft Forge 1.20.1 Server (Forge 47.3.0)..."
+echo "[11/15] Provisioning native Minecraft Forge 1.20.1 Server in ${MINECRAFT_DATA_DIR}..."
 if ! id "minecraft" &>/dev/null; then
-    useradd -r -m -U -d /opt/minecraft -s /bin/bash minecraft || true
+    useradd -r -m -U -d /home/minecraft -s /bin/bash minecraft || true
 fi
 
-mkdir -p /opt/minecraft/server/mods
-cd /opt/minecraft/server
+mkdir -p "${MINECRAFT_DATA_DIR}/server/mods"
+cd "${MINECRAFT_DATA_DIR}/server"
 
 MC_VERSION="1.20.1"
 FORGE_VERSION="47.3.0"
@@ -344,7 +415,7 @@ simulation-distance=8
 sync-chunk-writes=true
 EOF
     
-    # Inject Aikar's Tuned G1GC Flags directly into Forge JVM args (4GB dedicated RAM)
+    # Aikar's Tuned G1GC Flags (4GB dedicated RAM)
     cat <<EOF > user_jvm_args.txt
 -Xms4G
 -Xmx4G
@@ -368,17 +439,16 @@ EOF
 EOF
 fi
 
-chown -R minecraft:minecraft /opt/minecraft
+chown -R minecraft:minecraft "${MINECRAFT_DATA_DIR}"
 
 # Daily Minecraft Automated Backup Rotation (3:00 AM)
-cat << 'EOF' > /usr/local/bin/minecraft-backup.sh
+cat << EOF > /usr/local/bin/minecraft-backup.sh
 #!/usr/bin/env bash
-BACKUP_DIR="/mnt/external_1tb/minecraft-backups"
-mkdir -p "$BACKUP_DIR"
-DATE=$(date +%Y-%m-%d_%H%M)
-tar -czf "$BACKUP_DIR/world-$DATE.tar.gz" -C /opt/minecraft/server world || true
-# Keep only latest 7 backups
-ls -tp "$BACKUP_DIR"/world-*.tar.gz 2>/dev/null | grep -v '/$' | tail -n +8 | xargs -I {} rm -- {} 2>/dev/null || true
+BACKUP_DIR="${BACKUP_DIR}"
+mkdir -p "\$BACKUP_DIR"
+DATE=\$(date +%Y-%m-%d_%H%M)
+tar -czf "\$BACKUP_DIR/world-\$DATE.tar.gz" -C "${MINECRAFT_DATA_DIR}/server" world || true
+ls -tp "\$BACKUP_DIR"/world-*.tar.gz 2>/dev/null | grep -v '/\$' | tail -n +8 | xargs -I {} rm -- {} 2>/dev/null || true
 EOF
 chmod +x /usr/local/bin/minecraft-backup.sh
 (crontab -l 2>/dev/null | grep -v "minecraft-backup.sh"; echo "0 3 * * * /usr/local/bin/minecraft-backup.sh >/dev/null 2>&1") | crontab - || true
@@ -390,8 +460,8 @@ After=network.target tailscaled.service
 
 [Service]
 User=minecraft
-WorkingDirectory=/opt/minecraft/server
-ExecStart=/opt/minecraft/server/run.sh nogui
+WorkingDirectory=${MINECRAFT_DATA_DIR}/server
+ExecStart=${MINECRAFT_DATA_DIR}/server/run.sh nogui
 Restart=always
 RestartSec=15
 
@@ -412,7 +482,6 @@ if [ -d "/opt/crafty" ]; then
         cp -r ../crafty-4/* /opt/crafty/ || true
     fi
 
-    # Set predetermined default credentials: admin / Programming123
     cat << 'EOF' > /opt/crafty/app/config/default-creds.txt
 {
     "username": "admin",
@@ -449,13 +518,13 @@ EOF
 systemctl daemon-reload
 systemctl enable --now crafty.service || true
 
-# --- 13. GITEA (SOVEREIGN SELF-HOSTED GIT FORGE ON 1TB EXTERNAL DRIVE) ---
-echo "[13/15] Provisioning Native Gitea Git Server on Port 3000 (100GB+ LFS Ready)..."
+# --- 13. GITEA (SOVEREIGN SELF-HOSTED GIT FORGE) ---
+echo "[13/15] Provisioning Native Gitea Git Server on Port 3000..."
 if ! id "git" &>/dev/null; then
     useradd -r -m -U -d /var/lib/gitea -s /bin/bash git || true
 fi
 
-mkdir -p /etc/gitea /var/lib/gitea/data /var/lib/gitea/log /mnt/external_1tb/gitea-data/repositories /mnt/external_1tb/gitea-data/lfs
+mkdir -p /etc/gitea /var/lib/gitea/data /var/lib/gitea/log "${GITEA_DATA_DIR}/repositories" "${GITEA_DATA_DIR}/lfs"
 GITEA_BIN="/usr/local/bin/gitea"
 
 if [ ! -f "$GITEA_BIN" ]; then
@@ -480,26 +549,26 @@ OFFLINE_MODE = true
 
 [database]
 DB_TYPE = sqlite3
-PATH = /mnt/external_1tb/gitea-data/gitea.db
+PATH = ${GITEA_DATA_DIR}/gitea.db
 
 [repository]
-ROOT = /mnt/external_1tb/gitea-data/repositories
+ROOT = ${GITEA_DATA_DIR}/repositories
 MAX_CREATION_LIMIT = -1
 
 [repository.upload]
 ENABLED = true
-TEMP_PATH = /mnt/external_1tb/gitea-data/tmp/uploads
+TEMP_PATH = ${GITEA_DATA_DIR}/tmp/uploads
 ALLOWED_TYPES = *
 FILE_MAX_SIZE = 102400
 MAX_FILES = 50
 
 [lfs]
-PATH = /mnt/external_1tb/gitea-data/lfs
+PATH = ${GITEA_DATA_DIR}/lfs
 STORAGE_TYPE = local
 
 [attachment]
 ENABLED = true
-PATH = /mnt/external_1tb/gitea-data/attachments
+PATH = ${GITEA_DATA_DIR}/attachments
 MAX_SIZE = 102400
 MAX_FILES = 50
 
@@ -521,7 +590,7 @@ MODE = console
 LEVEL = Info
 EOF
 
-chown -R git:git /etc/gitea /var/lib/gitea /mnt/external_1tb/gitea-data
+chown -R git:git /etc/gitea /var/lib/gitea "${GITEA_DATA_DIR}"
 
 cat <<EOF > /etc/systemd/system/gitea.service
 [Unit]
@@ -560,20 +629,23 @@ fi
 
 # Add jellyfin user to video and render groups for Intel QuickSync hardware acceleration
 usermod -aG video,render jellyfin || true
-mkdir -p /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies
-chown -R jellyfin:jellyfin /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies || true
+mkdir -p "${MEDIA_DIR}/anime" "${MEDIA_DIR}/movies"
+chown -R jellyfin:jellyfin "${MEDIA_DIR}/anime" "${MEDIA_DIR}/movies" || true
 systemctl enable --now jellyfin || true
 
 # --- 15. QBITTORRENT-NOX (HEADLESS TORRENT DOWNLOADER ON PORT 9091) ---
 echo "[15/15] Provisioning qBittorrent-nox Headless Torrent Downloader on Port 9091..."
-mkdir -p /home/hades/.config/qBittorrent /mnt/external_1tb/media/downloads
-cat <<EOF > /home/hades/.config/qBittorrent/qBittorrent.conf
+CURRENT_USER="${SUDO_USER:-hades}"
+USER_HOME=$(getent passwd "$CURRENT_USER" | cut -d: -f6)
+mkdir -p "${USER_HOME}/.config/qBittorrent" "${MEDIA_DIR}/downloads"
+
+cat <<EOF > "${USER_HOME}/.config/qBittorrent/qBittorrent.conf"
 [LegalNotice]
 Accepted=true
 
 [Preferences]
-Downloads\SavePath=/mnt/external_1tb/media/downloads/
-Downloads\TempPath=/mnt/external_1tb/media/downloads/temp/
+Downloads\SavePath=${MEDIA_DIR}/downloads/
+Downloads\TempPath=${MEDIA_DIR}/downloads/temp/
 WebUI\Port=9091
 WebUI\Address=0.0.0.0
 WebUI\Username=admin
@@ -581,7 +653,7 @@ WebUI\Password_PBKDF2="@ByteArray(AR4NVl5uu2pU4Xg08aF1nw==:2L+XNqjZ7B/0f4p2kXNq/
 WebUI\CSRFProtection=false
 WebUI\ClickjackingProtection=false
 EOF
-chown -R hades:hades /home/hades/.config/qBittorrent /mnt/external_1tb/media/downloads || true
+chown -R "${CURRENT_USER}:${CURRENT_USER}" "${USER_HOME}/.config/qBittorrent" "${MEDIA_DIR}/downloads" || true
 
 cat <<EOF > /etc/systemd/system/qbittorrent-nox.service
 [Unit]
@@ -590,7 +662,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=hades
+User=${CURRENT_USER}
 ExecStart=/usr/bin/qbittorrent-nox --webui-port=9091
 Restart=always
 RestartSec=10
@@ -646,16 +718,17 @@ TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Run 'sudo tailscale up' to c
 
 echo "============================================================"
 echo "    [✔] AEGIS HOMELAB COMPLETE (ALL-IN-ONE PROVISIONED)"
+echo "    • Storage Strategy:     Choice [${STORAGE_CHOICE}]"
 echo "    • Aegis Dashboard:      http://${HOST_IP}:3001"
-echo "    • Samba Windows Share:  \\\\${HOST_IP}\\Storage1TB (Guest Access)"
+echo "    • Samba Windows Share:  \\\\${HOST_IP}\\Storage (Guest Access)"
 echo "    • Pi-hole Admin Web:    http://${HOST_IP}/admin/ (Pass: Programming123)"
 echo "    • Primary DNS Server:   ${HOST_IP}:53 (Pi-hole + Cloudflared DoH)"
 echo "    • Jellyfin Streaming:   http://${HOST_IP}:8096 (SyncPlay + QSV)"
 echo "    • qBittorrent WebUI:    http://${HOST_IP}:9091 (admin / Programming123)"
 echo "    • Sovereign Gitea Git:  http://${HOST_IP}:3000 (admin / Programming123)"
 echo "    • Crafty Controller:    https://${HOST_IP}:8443 (admin / Programming123)"
-echo "    • 1TB Anime Storage:    /mnt/external_1tb/media/anime"
-echo "    • Minecraft Backups:    /mnt/external_1tb/minecraft-backups (Auto 3AM)"
+echo "    • Media & Downloads:    ${MEDIA_DIR}"
+echo "    • Minecraft Forge 1.20: ${MINECRAFT_DATA_DIR} (Port 25565)"
 echo "    • Tailscale Multiplay:  ${TAILSCALE_IP}:25565"
 echo "    • UPS Battery Guard:    Auto-Safe Shutdown < 7% Battery"
 echo "============================================================"
