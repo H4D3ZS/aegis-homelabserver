@@ -13,22 +13,39 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+export DEBIAN_FRONTEND=noninteractive
+
 echo "============================================================"
 echo "    [+] INITIATING AEGIS HOMELAB NATIVE SERVER PROVISIONING "
 echo "============================================================"
 
-# --- 1. SYSTEM OS & DEPENDENCIES ---
-echo "[1/14] Updating package repository and installing core tools..."
+# --- 1. SYSTEM REPOSITORIES & DEPENDENCIES ---
+echo "[1/15] Enabling universe/multiverse repositories and installing core packages..."
 apt-get update -y
-apt-get install -y --no-install-recommends \
+apt-get install -y software-properties-common ca-certificates gnupg
+add-apt-repository -y universe || true
+add-apt-repository -y multiverse || true
+apt-get update -y
+
+# Install Core Tools & Storage
+echo "[+] Installing core utilities and storage tools..."
+apt-get install -y --fix-broken || true
+apt-get install -y \
     curl wget git git-lfs jq ufw nftables tlp tlp-rdw iw wireless-tools \
     wpasupplicant network-manager linux-firmware \
-    sqlite3 openjdk-21-jre-headless build-essential python3 python3-pip python3-venv \
-    ntfs-3g smartmontools rsync va-driver-all intel-media-va-driver-non-free vainfo \
-    qbittorrent-nox
+    sqlite3 build-essential ntfs-3g smartmontools rsync samba
+
+# Install Java 21 & Python 3
+echo "[+] Installing OpenJDK 21 and Python 3 venv..."
+apt-get install -y openjdk-21-jre-headless python3 python3-pip python3-venv python3-full || true
+
+# Install Media & Hardware Video Acceleration
+echo "[+] Installing qBittorrent and Intel QuickSync VA-API drivers..."
+apt-get install -y qbittorrent-nox vainfo || true
+apt-get install -y intel-media-va-driver-non-free || apt-get install -y intel-media-va-driver || true
 
 # --- 2. DISABLE SYSTEMD-RESOLVED STUB (FREE PORT 53 FOR PI-HOLE) ---
-echo "[2/14] Disabling systemd-resolved DNSStubListener to free Port 53 for Pi-hole..."
+echo "[2/15] Disabling systemd-resolved DNSStubListener to free Port 53 for Pi-hole..."
 mkdir -p /etc/systemd/resolved.conf.d/
 cat <<EOF > /etc/systemd/resolved.conf.d/disable-stub.conf
 [Resolve]
@@ -41,7 +58,7 @@ rm -f /etc/resolv.conf
 echo "nameserver 1.1.1.1" > /etc/resolv.conf
 
 # --- 3. TECLAST LAPTOP WI-FI FIRMWARE & HARDENING ---
-echo "[3/14] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
+echo "[3/15] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
 
 # Detect Wireless Interface Name (wlan0, wlp1s0, wlp2s0, etc.)
 WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
@@ -150,7 +167,7 @@ systemctl daemon-reload
 systemctl enable --now aegis-ups-watchdog.timer || true
 
 # --- 4. KERNEL TCP BBR & CONGESTION TUNING ---
-echo "[4/14] Enabling TCP BBR and tuning network sysctl parameters..."
+echo "[4/15] Enabling TCP BBR and tuning network sysctl parameters..."
 cat <<EOF > /etc/sysctl.d/99-aegis-network.conf
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -164,9 +181,10 @@ EOF
 sysctl --system || true
 
 # --- 5. EXTERNAL 1TB NTFS ENCLOSURE STORAGE MOUNT ---
-echo "[5/14] Configuring External 1TB NTFS Drive Mount (/mnt/external_1tb)..."
+echo "[5/15] Configuring External 1TB NTFS Drive Mount (/mnt/external_1tb)..."
 mkdir -p /mnt/external_1tb /mnt/external_1tb/gitea-data /mnt/external_1tb/minecraft-backups /mnt/external_1tb/aegis-archive \
-         /mnt/external_1tb/media /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies /mnt/external_1tb/media/downloads
+         /mnt/external_1tb/media /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies /mnt/external_1tb/media/downloads \
+         /mnt/external_1tb/shared
 
 # Find external NTFS drive partition if attached
 NTFS_DEV=$(lsblk -o NAME,FSTYPE -rn 2>/dev/null | grep -i "ntfs" | head -n 1 | awk '{print "/dev/" $1}' || echo "")
@@ -184,15 +202,30 @@ if [ -n "$NTFS_DEV" ]; then
     fi
 fi
 
-# --- 6. TAILSCALE REMOTE MULTIPLAYER MESH VPN ---
-echo "[6/14] Installing and provisioning Tailscale VPN (Zero-Config Multiplayer Mesh)..."
+# --- 6. SAMBA WINDOWS/MAC NETWORK FILE SHARING ---
+echo "[6/15] Configuring Samba Windows Network Drive (\\\\TECLAST\\Storage)..."
+cat << 'EOF' >> /etc/samba/smb.conf
+[Storage1TB]
+   comment = Aegis 1TB External Storage
+   path = /mnt/external_1tb
+   browseable = yes
+   read only = no
+   guest ok = yes
+   create mask = 0777
+   directory mask = 0777
+   force user = root
+EOF
+systemctl restart smbd nmbd || true
+
+# --- 7. TAILSCALE REMOTE MULTIPLAYER MESH VPN ---
+echo "[7/15] Installing and provisioning Tailscale VPN (Zero-Config Multiplayer Mesh)..."
 if ! command -v tailscale &> /dev/null; then
     curl -fsSL https://tailscale.com/install.sh | sh || true
     systemctl enable --now tailscaled || true
 fi
 
-# --- 7. ENCRYPTED DOH (CLOUDFLARED) ---
-echo "[7/14] Installing and provisioning Cloudflared DoH on port 5053..."
+# --- 8. ENCRYPTED DOH (CLOUDFLARED) ---
+echo "[8/15] Installing and provisioning Cloudflared DoH on port 5053..."
 if ! command -v cloudflared &> /dev/null; then
     wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -O /tmp/cloudflared.deb
     dpkg -i /tmp/cloudflared.deb || true
@@ -213,8 +246,8 @@ EOF
 cloudflared service install || true
 systemctl enable --now cloudflared || true
 
-# --- 8. NATIVE PI-HOLE SINKHOLE & CONDITIONAL FORWARDING ---
-echo "[8/14] Installing Pi-hole (Native Bare-Metal Port 53) & SafeSearch CNAMEs..."
+# --- 9. NATIVE PI-HOLE SINKHOLE & CONDITIONAL FORWARDING ---
+echo "[9/15] Installing Pi-hole (Native Bare-Metal Port 53) & SafeSearch CNAMEs..."
 mkdir -p /etc/pihole /etc/dnsmasq.d
 cat <<EOF > /etc/pihole/setupVars.conf
 PIHOLE_INTERFACE=${WIFI_IFACE}
@@ -250,8 +283,8 @@ fi
 # Set default Pi-hole web admin password: Programming123
 pihole -a -p "Programming123" || true
 
-# --- 9. CROWDSEC IPS & NFTABLES BOUNCER ---
-echo "[9/14] Installing CrowdSec security engine and firewall bouncer..."
+# --- 10. CROWDSEC IPS & NFTABLES BOUNCER ---
+echo "[10/15] Installing CrowdSec security engine and firewall bouncer..."
 if ! command -v crowdsec &> /dev/null; then
     curl -s https://packagecloud.io/install/repositories/crowdsecurity/crowdsec/script.deb.sh | bash || true
     apt-get install -y crowdsec crowdsec-firewall-bouncer-nftables || true
@@ -264,6 +297,8 @@ if command -v ufw &> /dev/null; then
     ufw allow 53/tcp || true
     ufw allow 53/udp || true
     ufw allow 80/tcp || true
+    ufw allow 445/tcp || true
+    ufw allow 139/tcp || true
     ufw allow 25565/tcp || true
     ufw allow 25565/udp || true
     ufw allow 3000/tcp || true
@@ -272,8 +307,8 @@ if command -v ufw &> /dev/null; then
     ufw allow 9091/tcp || true
 fi
 
-# --- 10. MINECRAFT FORGE SERVER (NATIVE MODDED 1.20.1 MULTIPLAYER) ---
-echo "[10/14] Provisioning native Minecraft Forge 1.20.1 Server (Forge 47.3.0)..."
+# --- 11. MINECRAFT FORGE SERVER (NATIVE MODDED 1.20.1 MULTIPLAYER) ---
+echo "[11/15] Provisioning native Minecraft Forge 1.20.1 Server (Forge 47.3.0)..."
 if ! id "minecraft" &>/dev/null; then
     useradd -r -m -U -d /opt/minecraft -s /bin/bash minecraft || true
 fi
@@ -335,6 +370,19 @@ fi
 
 chown -R minecraft:minecraft /opt/minecraft
 
+# Daily Minecraft Automated Backup Rotation (3:00 AM)
+cat << 'EOF' > /usr/local/bin/minecraft-backup.sh
+#!/usr/bin/env bash
+BACKUP_DIR="/mnt/external_1tb/minecraft-backups"
+mkdir -p "$BACKUP_DIR"
+DATE=$(date +%Y-%m-%d_%H%M)
+tar -czf "$BACKUP_DIR/world-$DATE.tar.gz" -C /opt/minecraft/server world || true
+# Keep only latest 7 backups
+ls -tp "$BACKUP_DIR"/world-*.tar.gz 2>/dev/null | grep -v '/$' | tail -n +8 | xargs -I {} rm -- {} 2>/dev/null || true
+EOF
+chmod +x /usr/local/bin/minecraft-backup.sh
+(crontab -l 2>/dev/null | grep -v "minecraft-backup.sh"; echo "0 3 * * * /usr/local/bin/minecraft-backup.sh >/dev/null 2>&1") | crontab - || true
+
 cat <<EOF > /etc/systemd/system/minecraft.service
 [Unit]
 Description=Minecraft Forge Server (Native Modded 1.20.1 Multiplayer)
@@ -354,8 +402,8 @@ EOF
 systemctl daemon-reload
 systemctl enable --now minecraft.service || true
 
-# --- 11. CRAFTY CONTROLLER 4 (MINECRAFT WEB GUI) ---
-echo "[11/14] Provisioning Crafty Controller 4 Web Management GUI..."
+# --- 12. CRAFTY CONTROLLER 4 (MINECRAFT WEB GUI) ---
+echo "[12/15] Provisioning Crafty Controller 4 Web Management GUI..."
 mkdir -p /opt/crafty/app/config
 if [ -d "/opt/crafty" ]; then
     if [ -d "./crafty-4" ]; then
@@ -401,8 +449,8 @@ EOF
 systemctl daemon-reload
 systemctl enable --now crafty.service || true
 
-# --- 12. GITEA (SOVEREIGN SELF-HOSTED GIT FORGE ON 1TB EXTERNAL DRIVE) ---
-echo "[12/14] Provisioning Native Gitea Git Server on Port 3000 (100GB+ LFS Ready)..."
+# --- 13. GITEA (SOVEREIGN SELF-HOSTED GIT FORGE ON 1TB EXTERNAL DRIVE) ---
+echo "[13/15] Provisioning Native Gitea Git Server on Port 3000 (100GB+ LFS Ready)..."
 if ! id "git" &>/dev/null; then
     useradd -r -m -U -d /var/lib/gitea -s /bin/bash git || true
 fi
@@ -501,10 +549,10 @@ systemctl enable --now gitea.service || true
 su - git -c "gitea admin user create --username administrator --password Programming123 --email admin@homelab.local --admin --config /etc/gitea/app.ini" || true
 su - git -c "gitea admin user create --username hades --password Programming123 --email hades@homelab.local --admin --config /etc/gitea/app.ini" || true
 
-# --- 13. JELLYFIN MEDIA SERVER (HARDWARE ACCELERATED ANIME STREAMING ON PORT 8096) ---
-echo "[13/14] Provisioning Jellyfin Media Server with Intel QuickSync QSV on Port 8096..."
+# --- 14. JELLYFIN MEDIA SERVER (HARDWARE ACCELERATED ANIME STREAMING ON PORT 8096) ---
+echo "[14/15] Provisioning Jellyfin Media Server with Intel QuickSync QSV on Port 8096..."
 if ! command -v jellyfin &> /dev/null; then
-    curl -fsSL https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/jellyfin.gpg || true
+    curl -fsSL https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/jellyfin.gpg || true
     echo "deb [signed-by=/etc/apt/trusted.gpg.d/jellyfin.gpg] https://repo.jellyfin.org/ubuntu $(lsb_release -c -s) main" > /etc/apt/sources.list.d/jellyfin.list
     apt-get update -y || true
     apt-get install -y jellyfin || true
@@ -516,8 +564,8 @@ mkdir -p /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies
 chown -R jellyfin:jellyfin /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies || true
 systemctl enable --now jellyfin || true
 
-# --- 14. QBITTORRENT-NOX (HEADLESS TORRENT DOWNLOADER ON PORT 9091) ---
-echo "[14/14] Provisioning qBittorrent-nox Headless Torrent Downloader on Port 9091..."
+# --- 15. QBITTORRENT-NOX (HEADLESS TORRENT DOWNLOADER ON PORT 9091) ---
+echo "[15/15] Provisioning qBittorrent-nox Headless Torrent Downloader on Port 9091..."
 mkdir -p /home/hades/.config/qBittorrent /mnt/external_1tb/media/downloads
 cat <<EOF > /home/hades/.config/qBittorrent/qBittorrent.conf
 [LegalNotice]
@@ -599,6 +647,7 @@ TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Run 'sudo tailscale up' to c
 echo "============================================================"
 echo "    [✔] AEGIS HOMELAB COMPLETE (ALL-IN-ONE PROVISIONED)"
 echo "    • Aegis Dashboard:      http://${HOST_IP}:3001"
+echo "    • Samba Windows Share:  \\\\${HOST_IP}\\Storage1TB (Guest Access)"
 echo "    • Pi-hole Admin Web:    http://${HOST_IP}/admin/ (Pass: Programming123)"
 echo "    • Primary DNS Server:   ${HOST_IP}:53 (Pi-hole + Cloudflared DoH)"
 echo "    • Jellyfin Streaming:   http://${HOST_IP}:8096 (SyncPlay + QSV)"
@@ -606,6 +655,7 @@ echo "    • qBittorrent WebUI:    http://${HOST_IP}:9091 (admin / Programming1
 echo "    • Sovereign Gitea Git:  http://${HOST_IP}:3000 (admin / Programming123)"
 echo "    • Crafty Controller:    https://${HOST_IP}:8443 (admin / Programming123)"
 echo "    • 1TB Anime Storage:    /mnt/external_1tb/media/anime"
+echo "    • Minecraft Backups:    /mnt/external_1tb/minecraft-backups (Auto 3AM)"
 echo "    • Tailscale Multiplay:  ${TAILSCALE_IP}:25565"
 echo "    • UPS Battery Guard:    Auto-Safe Shutdown < 7% Battery"
 echo "============================================================"
