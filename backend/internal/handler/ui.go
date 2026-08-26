@@ -477,7 +477,7 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso
         <p class="text-xs muted">Network-wide ad-blocking, tracker neutralization, DNS-over-HTTPS &amp; SafeSearch enforcement</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="http://localhost/admin/" target="_blank" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+        <a id="piholeAdminLink" href="http://localhost/admin/" target="_blank" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
           <span>🕳️ Open Pi-hole Admin Portal</span>
           <span class="mono text-[10px] bg-red-900 px-1.5 py-0.5 rounded">/admin/</span>
         </a>
@@ -513,11 +513,11 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso
         <p class="text-xs muted">Hardware-accelerated Intel QuickSync streaming, SyncPlay watch parties &amp; custom storage paths</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="http://localhost:8096" target="_blank" class="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+        <a id="jellyfinLink" href="http://localhost:8096" target="_blank" class="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
           <span>🎬 Open Jellyfin Cinema</span>
           <span class="mono text-[10px] bg-purple-900 px-1.5 py-0.5 rounded">:8096</span>
         </a>
-        <a href="http://localhost:9091" target="_blank" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+        <a id="qbitLink" href="http://localhost:9091" target="_blank" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
           <span>📥 Open qBittorrent WebUI</span>
           <span class="mono text-[10px] bg-cyan-900 px-1.5 py-0.5 rounded">:9091</span>
         </a>
@@ -567,7 +567,7 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso
         <p class="text-xs muted">Forge 1.20.1 runtime • Tailscale zero-config mesh VPN for remote girlfriend play</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="https://localhost:8443" target="_blank" class="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+        <a id="craftyLink" href="https://localhost:8443" target="_blank" class="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
           <span>🚀 Open Crafty Controller GUI</span>
           <span class="mono text-[10px] bg-emerald-900 px-1.5 py-0.5 rounded">:8443</span>
         </a>
@@ -583,7 +583,7 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso
         <p class="text-xs muted">Live telemetry for both Internal 256GB SSD &amp; External 1TB NTFS Enclosure</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="http://localhost:3000" target="_blank" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+        <a id="giteaLink" href="http://localhost:3000" target="_blank" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
           <span>🐙 Open Gitea Web GUI</span>
           <span class="mono text-[10px] bg-cyan-900 px-1.5 py-0.5 rounded">:3000</span>
         </a>
@@ -659,6 +659,17 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso
   </main>
 
   <script>
+    (function fixLocalhostLinksForLAN() {
+      const host = window.location.hostname;
+      if (!host || host === 'localhost' || host === '127.0.0.1') return;
+      const rewire = (id, url) => { const el = document.getElementById(id); if (el) el.href = url; };
+      rewire('piholeAdminLink', 'http://' + host + '/admin/');
+      rewire('jellyfinLink', 'http://' + host + ':8096');
+      rewire('qbitLink', 'http://' + host + ':9091');
+      rewire('craftyLink', 'https://' + host + ':8443');
+      rewire('giteaLink', 'http://' + host + ':3000');
+    })();
+
     let allDevices = [];
     let filteredDevices = [];
     let currentDevicePage = 1;

@@ -710,9 +710,30 @@ fi
 if [ -d "backend" ]; then
     echo "Compiling embedded Go binary..."
     cd backend
-    go build -buildvcs=false -ldflags="-s -w" -o /usr/local/bin/pi-sentinel ./cmd/sentinel/main.go || true
+    go build -buildvcs=false -ldflags="-s -w" -o /usr/local/bin/pi-sentinel ./cmd/sentinel || true
     cd ..
 fi
+chmod 755 /usr/local/bin/pi-sentinel
+
+# pi-sentinel takes its settings as CLI flags/env vars (see backend/cmd/sentinel/main.go),
+# not a YAML file, so the values from backend/configs/config.yaml are surfaced here as
+# an EnvironmentFile instead of an unsupported --config flag.
+cat <<EOF > /etc/pi-sentinel/pi-sentinel.env
+PORT=3001
+DB_PATH=/var/lib/pi-sentinel/sentinel.db
+PIHOLE_LOG=/var/log/pihole/pihole.log
+SAFESEARCH_CONF=/etc/dnsmasq.d/05-safesearch.conf
+PIHOLE_BIN=/usr/local/bin/pihole
+SLA_DOWN_MBPS=500.0
+SLA_UP_MBPS=100.0
+ISP_NAME="Converge ICT FiberX"
+ROUTER_URL=http://192.168.100.1
+ROUTER_USER=root
+ROUTER_PASS="admin 123"
+ROUTER_TYPE=huawei_ont
+ROUTER_AUTO_HEAL=true
+EOF
+chmod 640 /etc/pi-sentinel/pi-sentinel.env
 
 cat <<EOF > /etc/systemd/system/pi-sentinel.service
 [Unit]
@@ -721,7 +742,8 @@ After=network.target pihole-FTL.service cloudflared.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/pi-sentinel --port=3001 --config=/etc/pi-sentinel/config.yaml
+EnvironmentFile=/etc/pi-sentinel/pi-sentinel.env
+ExecStart=/usr/local/bin/pi-sentinel
 Restart=always
 RestartSec=5
 LimitNOFILE=65535
