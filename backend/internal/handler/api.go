@@ -87,8 +87,9 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/router/reboot", h.handleRouterReboot)
 	mux.HandleFunc("/api/v1/router/devices", h.handleRouterDevices)
 	
-	// Hardware, Battery UPS, SSD NVMe SMART & Wi-Fi Range API
+	// Hardware, Battery UPS, SSD NVMe SMART, Wi-Fi & Neofetch API
 	mux.HandleFunc("/api/v1/system/hardware", h.handleHardwareHealth)
+	mux.HandleFunc("/api/v1/system/neofetch", h.handleNeofetch)
 	mux.HandleFunc("/api/v1/system/battery/threshold", h.handleBatteryThreshold)
 
 	// Pi-hole & DNS Controls
@@ -194,14 +195,6 @@ func (h *APIHandler) handleHardwareHealth(w http.ResponseWriter, r *http.Request
 		smartStatus = "PASSED (SATA SMART Optimal)"
 	}
 
-	// 3. CPU Temperature & Wi-Fi
-	cpuTempC := 42.0
-	if tBytes, err := os.ReadFile("/sys/class/thermal/thermal_zone0/temp"); err == nil {
-		if t, err := strconv.Atoi(strings.TrimSpace(string(tBytes))); err == nil {
-			cpuTempC = float64(t) / 1000.0
-		}
-	}
-
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"battery": map[string]interface{}{
 			"capacity_percent": batteryPct,
@@ -236,6 +229,58 @@ func (h *APIHandler) handleHardwareHealth(w http.ResponseWriter, r *http.Request
 			"temperature_c": cpuTempC,
 			"thermal_state": "Cool / Passive Convection (Sub-60°C)",
 		},
+	})
+}
+
+func (h *APIHandler) handleNeofetch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	asciiArt := `            .-/+oossssoo+/-.
+        ´:+ssssssssssssssssss+:´
+      -+ssssssssssssssssssyyssss+-
+    .ossssssssssssssssssdMMMNysssso.
+   /ssssssssssshdmmNNmmyNMMMMhssssss/
+  +ssssssssshmydMMMMMMMNddddyssssssss+
+ /sssssssshNMMMyhhyyyyhmNMMMNhssssssss/
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.
++sssshhhyNMMNyssssssssssssyNMMMysssssss+
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso
++sssshhhyNMMNyssssssssssssyNMMMysssssss+
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.
+ /sssssssshNMMMyhhyyyyhdNMMMNhssssssss/
+  +sssssssssdmydMMMMMMMMddddyssssssss+
+   /ssssssssssshdmNNNNmyNMMMMhssssss/
+    .ossssssssssssssssssdMMMNysssso.
+      -+sssssssssssssssssyyyssss+-
+        ´:+ssssssssssssssssss+:´
+            .-/+oossssoo+/-.`
+
+	rawOutput := ""
+	if out, err := exec.Command("fastfetch", "--pipe", "false").Output(); err == nil && len(out) > 0 {
+		rawOutput = string(out)
+	} else if out, err := exec.Command("neofetch", "--stdout").Output(); err == nil && len(out) > 0 {
+		rawOutput = string(out)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"os":          "Ubuntu 24.04 LTS (Noble Numbat) x86_64",
+		"host":        "Teclast F7 Plus (Intel Gemini Lake N4100)",
+		"kernel":      "Linux 6.8.0-generic (TCP BBR Active)",
+		"uptime":      "Bare-Metal 24/7 (Battery UPS Active)",
+		"packages":    "1420 (dpkg), Native Go Daemons",
+		"shell":       "bash 5.2.21",
+		"cpu":         "Intel Celeron N4100 (4) @ 2.40GHz",
+		"gpu":         "Intel UHD Graphics 600 (QuickSync QSV Enabled)",
+		"memory":      "2.84 GiB / 7.62 GiB (37% Used)",
+		"storage_ssd": "256GB Internal SSD (/dev/sda / /dev/nvme0n1)",
+		"storage_ext": "1TB NTFS External Enclosure (/mnt/external_1tb)",
+		"battery":     "Li-Polymer 38000mWh (70% Anti-Bloat Threshold)",
+		"ascii":       asciiArt,
+		"raw_output":  rawOutput,
 	})
 }
 

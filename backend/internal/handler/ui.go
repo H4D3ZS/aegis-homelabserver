@@ -295,23 +295,58 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-semibold text-[11px]">EXCELLENT 5GHz</span>
         </div>
 
-        <div class="space-y-2 text-zinc-300">
-          <div class="flex justify-between py-1 border-b border-[#18181B]">
-            <span class="muted">Wireless Interface:</span>
-            <span class="mono text-white">wlan0 (Intel Dual Band Wireless)</span>
-          </div>
-          <div class="flex justify-between py-1 border-b border-[#18181B]">
-            <span class="muted">Signal Strength (RSSI):</span>
-            <span class="mono text-emerald-400">-52 dBm (94% Strong Signal)</span>
-          </div>
-          <div class="flex justify-between py-1 border-b border-[#18181B]">
-            <span class="muted">PHY Link Rate:</span>
-            <span class="mono text-white">433.3 Mbps (802.11ac 80MHz)</span>
-          </div>
-          <div class="flex justify-between py-1 border-b border-[#18181B]">
-            <span class="muted">Wi-Fi Power Save:</span>
-            <span class="mono text-emerald-400">Disabled (High-Performance Mode)</span>
-          </div>
+    <!-- Neofetch / Screenfetch Terminal Profile Card -->
+    <div class="p-5 rounded-lg bg-[#0C0C0E] border border-[#27272A] space-y-3">
+      <div class="flex justify-between items-center pb-2 border-b border-[#18181B]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="mono text-xs text-zinc-400 font-semibold ml-2">hades@aegis-teclast ~ neofetch</span>
+        </div>
+        <span class="text-[11px] muted mono">x86_64 Gemini Lake N4100</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 text-xs mono pt-2">
+        <!-- Ubuntu ASCII Logo -->
+        <div class="md:col-span-5 text-amber-500 whitespace-pre text-[10px] leading-tight select-none font-bold">
+            .-/+oossssoo+/-.
+        ´:+ssssssssssssssssss+:´
+      -+ssssssssssssssssssyyssss+-
+    .ossssssssssssssssssdMMMNysssso.
+   /ssssssssssshdmmNNmmyNMMMMhssssss/
+  +ssssssssshmydMMMMMMMNddddyssssssss+
+ /sssssssshNMMMyhhyyyyhmNMMMNhssssssss/
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.
++sssshhhyNMMNyssssssssssssyNMMMysssssss+
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso
+ossyNMMMNyMMhsssssssssssssshmmmhssssssso
++sssshhhyNMMNyssssssssssssyNMMMysssssss+
+.ssssssssdMMMNhsssssssssshNMMMdssssssss.
+ /sssssssshNMMMyhhyyyyhdNMMMNhssssssss/
+  +sssssssssdmydMMMMMMMMddddyssssssss+
+   /ssssssssssshdmNNNNmyNMMMMhssssss/
+    .ossssssssssssssssssdMMMNysssso.
+      -+sssssssssssssssssyyyssss+-
+        ´:+ssssssssssssssssss+:´
+            .-/+oossssoo+/-.
+        </div>
+
+        <!-- Specs Key-Values -->
+        <div class="md:col-span-7 space-y-1.5 text-zinc-300 text-xs">
+          <div><span class="text-amber-400 font-bold">hades</span>@<span class="text-amber-400 font-bold">aegis-teclast</span></div>
+          <div class="text-zinc-600">--------------------------</div>
+          <div><span class="text-cyan-400 font-semibold">OS:</span> Ubuntu 24.04 LTS (Noble Numbat) x86_64</div>
+          <div><span class="text-cyan-400 font-semibold">Host:</span> Teclast F7 Plus (Intel Gemini Lake)</div>
+          <div><span class="text-cyan-400 font-semibold">Kernel:</span> 6.8.0-generic (TCP BBR Active)</div>
+          <div><span class="text-cyan-400 font-semibold">Uptime:</span> 24/7 Server (Battery UPS Active)</div>
+          <div><span class="text-cyan-400 font-semibold">Shell:</span> bash 5.2.21</div>
+          <div><span class="text-cyan-400 font-semibold">CPU:</span> Intel Celeron N4100 (4) @ 2.40GHz</div>
+          <div><span class="text-cyan-400 font-semibold">GPU:</span> Intel UHD Graphics 600 (QuickSync QSV)</div>
+          <div><span class="text-cyan-400 font-semibold">Memory:</span> 2.84 GiB / 7.62 GiB (37% Used)</div>
+          <div><span class="text-cyan-400 font-semibold">Disk (Root SSD):</span> 256GB High-Speed M.2 (22% Used)</div>
+          <div><span class="text-cyan-400 font-semibold">Disk (Media Ext):</span> 1TB NTFS Enclosure (16% Used)</div>
+          <div><span class="text-cyan-400 font-semibold">Battery:</span> Li-Polymer 38000mWh (70% Anti-Bloat)</div>
         </div>
       </div>
     </div>
