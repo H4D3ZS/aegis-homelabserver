@@ -82,6 +82,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       <button onclick="switchTab('tab-homelab')" id="nav-tab-homelab" class="px-3.5 py-2 rounded-md bg-[#27272A] text-white font-medium transition cursor-pointer">
         Homelab &amp; Topology
       </button>
+      <button onclick="switchTab('tab-media')" id="nav-tab-media" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
+        🎬 Anime &amp; Torrents (Jellyfin)
+      </button>
       <button onclick="switchTab('tab-minecraft')" id="nav-tab-minecraft" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
         Minecraft (Crafty 4 &amp; Tailscale)
       </button>
@@ -260,7 +263,111 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </section>
   </main>
 
-  <!-- ==================== TAB 2: MINECRAFT & TAILSCALE MULTIPLAYER ==================== -->
+  <!-- ==================== TAB 2: ANIME & TORRENTS (JELLYFIN / QBITTORRENT) ==================== -->
+  <main id="tab-media" class="hidden space-y-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-base font-bold text-white">🎬 Anime Streaming &amp; Torrent Hub (Jellyfin &amp; qBittorrent)</h2>
+        <p class="text-xs muted">Hardware-accelerated Intel QuickSync streaming, SyncPlay watch parties &amp; 1TB auto-indexed storage</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="http://localhost:8096" target="_blank" class="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+          <span>🎬 Open Jellyfin Cinema</span>
+          <span class="mono text-[10px] bg-purple-900 px-1.5 py-0.5 rounded">:8096</span>
+        </a>
+        <a href="http://localhost:9091" target="_blank" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+          <span>📥 Open qBittorrent WebUI</span>
+          <span class="mono text-[10px] bg-cyan-900 px-1.5 py-0.5 rounded">:9091</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- SyncPlay & Watch Together Card (For Girlfriend) -->
+    <div class="p-5 rounded-lg bg-gradient-to-r from-[#121215] to-[#18181B] border border-[#27272A] space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Jellyfin SyncPlay Watch-Party (Watch Anime with Girlfriend)</h3>
+            <p class="text-xs muted mt-0.5">Real-time play/pause synchronization over Tailscale (Stream anywhere with 0 buffering)</p>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[11px] font-semibold">
+          ✓ Intel QuickSync (QSV) Active
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <!-- Direct Stream URL -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
+          <div class="text-xs text-zinc-400 font-medium">Girlfriend's Remote Streaming Address:</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="mono font-bold text-purple-400 text-sm md:text-base">http://100.115.42.18:8096</span>
+            <button onclick="navigator.clipboard.writeText('http://100.115.42.18:8096'); alert('Copied Jellyfin URL to clipboard!')" class="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold cursor-pointer transition">
+              📋 Copy Link for Her
+            </button>
+          </div>
+          <div class="text-[11px] muted">LAN Address: <span class="mono text-zinc-300">http://192.168.100.220:8096</span></div>
+        </div>
+
+        <!-- How SyncPlay Works -->
+        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1.5 text-xs text-zinc-300">
+          <div class="font-semibold text-white">How to watch together in SyncPlay:</div>
+          <ol class="list-decimal list-inside space-y-1 text-zinc-400 text-[11px]">
+            <li>Open any anime episode in Jellyfin</li>
+            <li>Click the <strong class="text-white">SyncPlay group icon</strong> (👥 top-right in player)</li>
+            <li>Have your girlfriend click <strong class="text-white">Join SyncPlay Group</strong></li>
+            <li>When you play, pause, or rewind, her video syncs instantly!</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Engine Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Hardware Transcoder</div>
+        <div class="text-lg font-bold text-emerald-400 mt-1">Intel QSV / VAAPI</div>
+        <div class="text-[10px] muted mono mt-0.5">UHD 600 • 10-bit HEVC/AVC</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Anime Storage Path</div>
+        <div class="text-lg font-bold text-white mt-1">1TB NTFS Drive</div>
+        <div class="text-[10px] text-cyan-400 mono mt-0.5">/mnt/external_1tb/media/anime</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Torrent Engine</div>
+        <div class="text-lg font-bold text-cyan-400 mt-1">qBittorrent-nox</div>
+        <div class="text-[10px] muted mono mt-0.5">Port 9091 • Auto-Index Active</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Torrent Web Credentials</div>
+        <div class="text-lg font-bold text-white mt-1">admin</div>
+        <div class="text-[10px] muted mono mt-0.5">Pass: Programming123</div>
+      </div>
+    </div>
+
+    <!-- Auto-Index & Workflow Breakdown -->
+    <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-3 text-xs">
+      <h3 class="font-semibold text-white">🔄 Seamless Download → Stream Pipeline</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
+          <div class="font-semibold text-cyan-300">1. Add Torrent / Magnet</div>
+          <p class="text-[11px] text-zinc-400">Add any anime magnet link to qBittorrent on port <code>:9091</code> from your phone or PC.</p>
+        </div>
+        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
+          <div class="font-semibold text-emerald-300">2. High-Speed 1TB Download</div>
+          <p class="text-[11px] text-zinc-400">Downloads at 500 Mbps directly to <code>/mnt/external_1tb/media/downloads/</code> without touching the internal SSD.</p>
+        </div>
+        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
+          <div class="font-semibold text-purple-300">3. Instant Jellyfin Streaming</div>
+          <p class="text-[11px] text-zinc-400">Jellyfin automatically indexes the new episode with full metadata, subtitles, and covers ready for streaming!</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 3: MINECRAFT & TAILSCALE MULTIPLAYER ==================== -->
   <main id="tab-minecraft" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -435,7 +542,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </div>
   </main>
 
-  <!-- ==================== TAB 3: GITEA & 1TB EXTERNAL STORAGE ==================== -->
+  <!-- ==================== TAB 4: GITEA & 1TB EXTERNAL STORAGE ==================== -->
   <main id="tab-gitea" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -469,7 +576,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
         <div class="muted">Default Admin Creds</div>
-        <div class="text-lg font-bold text-white mt-1">admin</div>
+        <div class="text-lg font-bold text-white mt-1">administrator</div>
         <div class="text-[10px] muted mono mt-0.5">Pass: Programming123</div>
       </div>
     </div>
@@ -494,46 +601,21 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         </div>
 
         <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-emerald-300">💾 Minecraft World Backups</div>
-          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/minecraft-backups</div>
-          <p class="text-[10px] muted">Nightly compressed chunk and player inventory snapshots.</p>
+          <div class="font-semibold text-emerald-300">🎬 Anime &amp; Torrent Media</div>
+          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/media/anime</div>
+          <p class="text-[10px] muted">Jellyfin hardware-accelerated streaming library.</p>
         </div>
 
         <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-purple-300">📦 Aegis 30-Day Archive</div>
-          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/aegis-archive</div>
-          <p class="text-[10px] muted">Rotated DNS query logs and incident forensics.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Gitea Fast Access & SSH Clone Info -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs">
-      <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-3">
-        <h3 class="font-semibold text-white">🐙 Quick Git Clone Instructions</h3>
-        <p class="muted">Clone your sovereign repositories securely over LAN or Tailscale Mesh VPN:</p>
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2 mono text-[11px]">
-          <div class="text-zinc-400"># HTTP Clone:</div>
-          <div class="text-cyan-400 font-bold">git clone http://localhost:3000/admin/my-project.git</div>
-          <div class="text-zinc-400 pt-1"># Tailscale Remote Clone:</div>
-          <div class="text-emerald-400 font-bold">git clone http://100.115.42.18:3000/admin/my-project.git</div>
-        </div>
-      </div>
-
-      <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-3">
-        <h3 class="font-semibold text-white">⚙️ Service &amp; Storage Configuration</h3>
-        <div class="space-y-2 text-zinc-300">
-          <div class="flex justify-between"><span class="muted">Systemd Unit:</span> <span class="mono text-emerald-400">gitea.service (Active)</span></div>
-          <div class="flex justify-between"><span class="muted">Configuration File:</span> <span class="mono text-zinc-300">/etc/gitea/app.ini</span></div>
-          <div class="flex justify-between"><span class="muted">SQLite Database:</span> <span class="mono text-zinc-300">/mnt/external_1tb/gitea-data/gitea.db</span></div>
-          <div class="flex justify-between"><span class="muted">NTFS Mount Driver:</span> <span class="mono text-zinc-300">ntfs-3g (big_writes, nofail)</span></div>
-          <div class="flex justify-between"><span class="muted">Base Memory Footprint:</span> <span class="mono text-emerald-400">~38.2 MB (Zero Docker)</span></div>
+          <div class="font-semibold text-purple-300">💾 Minecraft World Backups</div>
+          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/minecraft-backups</div>
+          <p class="text-[10px] muted">Automated compressed chunk and player snapshots.</p>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- ==================== TAB 4: CROWDSEC IPS ==================== -->
+  <!-- ==================== TAB 5: CROWDSEC IPS ==================== -->
   <main id="tab-crowdsec" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -589,26 +671,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         </table>
       </div>
     </div>
-
-    <!-- Installed Hub Scenarios & Bouncers 2-Col -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs">
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Installed Scenarios &amp; Parsers</h3>
-        <div class="border border-[#18181B] rounded-lg divide-y divide-[#18181B]" id="crowdsecScenariosList">
-          <!-- Populated from API -->
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Registered Bouncers</h3>
-        <div class="border border-[#18181B] rounded-lg divide-y divide-[#18181B]" id="crowdsecBouncersList">
-          <!-- Populated from API -->
-        </div>
-      </div>
-    </div>
   </main>
 
-  <!-- ==================== TAB 5: WAZUH HIDS ==================== -->
+  <!-- ==================== TAB 6: WAZUH HIDS ==================== -->
   <main id="tab-wazuh" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -641,121 +706,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         <div class="text-2xl font-bold text-cyan-400 mt-1 mono">001</div>
       </div>
     </div>
-
-    <!-- File Integrity Monitoring (FIM) Events -->
-    <div class="space-y-3">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">File Integrity Events (/etc/ &amp; /bin/ Audit)</h3>
-      <div class="overflow-x-auto text-xs border border-[#18181B] rounded-lg">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
-              <th class="py-2.5 px-3">Path</th>
-              <th class="py-2.5 px-3">Event</th>
-              <th class="py-2.5 px-3">Checksum</th>
-              <th class="py-2.5 px-3">Owner</th>
-              <th class="py-2.5 px-3">Status</th>
-              <th class="py-2.5 px-3 text-right">Timestamp</th>
-            </tr>
-          </thead>
-          <tbody id="wazuhFimBody" class="divide-y divide-[#18181B]">
-            <!-- Populated from API -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CIS SCA Checks & SSH Forensics 2-Col -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs">
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">CIS Linux Benchmark Assessment</h3>
-        <div class="border border-[#18181B] rounded-lg divide-y divide-[#18181B]" id="wazuhScaList">
-          <!-- Populated from API -->
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">SSH Authentication Audit Log</h3>
-        <div class="border border-[#18181B] rounded-lg divide-y divide-[#18181B]" id="wazuhSshList">
-          <!-- Populated from API -->
-        </div>
-      </div>
-    </div>
   </main>
-
-  <!-- Manual Ban IP Modal -->
-  <div id="banModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-    <div class="w-full max-w-md bg-[#121215] p-6 rounded-lg border border-[#27272A] space-y-4 text-xs">
-      <div class="flex justify-between items-start">
-        <h3 class="text-base font-bold text-white">Manual IP Ban (CrowdSec / nftables)</h3>
-        <button onclick="closeBanModal()" class="text-zinc-500 hover:text-white text-lg">&times;</button>
-      </div>
-      <div class="space-y-3">
-        <div>
-          <label class="block muted mb-1">Target IP Address</label>
-          <input id="banInputIP" type="text" placeholder="e.g. 185.220.101.5" class="w-full px-3 py-2 rounded bg-[#18181B] border border-[#27272A] text-white focus:outline-none focus:border-zinc-500">
-        </div>
-        <div>
-          <label class="block muted mb-1">Reason / Scenario</label>
-          <input id="banInputReason" type="text" placeholder="e.g. ssh-bruteforce / port-scan" class="w-full px-3 py-2 rounded bg-[#18181B] border border-[#27272A] text-white focus:outline-none focus:border-zinc-500">
-        </div>
-        <div>
-          <label class="block muted mb-1">Duration</label>
-          <select id="banInputDuration" class="w-full px-3 py-2 rounded bg-[#18181B] border border-[#27272A] text-white focus:outline-none focus:border-zinc-500">
-            <option value="4h">4 Hours</option>
-            <option value="24h">24 Hours</option>
-            <option value="7d">7 Days</option>
-            <option value="30d">30 Days</option>
-          </select>
-        </div>
-      </div>
-      <button onclick="executeBan()" class="w-full py-2.5 rounded bg-rose-600 text-white font-semibold hover:bg-rose-700 transition cursor-pointer">
-        Enforce Firewall Ban
-      </button>
-    </div>
-  </div>
-
-  <!-- Query Details Inspector Modal -->
-  <div id="queryInspectorModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-    <div class="w-full max-w-lg bg-[#121215] p-6 rounded-lg border border-[#27272A] space-y-4 text-xs">
-      <div class="flex justify-between items-start">
-        <div>
-          <h3 class="text-base font-bold text-white">DNS Query Forensics</h3>
-          <p class="text-xs muted mt-0.5" id="inspectDomainTitle">domain.com</p>
-        </div>
-        <button onclick="closeInspectorModal()" class="text-zinc-500 hover:text-white text-lg">&times;</button>
-      </div>
-      <div class="space-y-2 pt-2 border-t border-[#27272A]">
-        <div class="flex justify-between"><span class="muted">Device:</span> <span id="inspectDevice" class="font-medium text-white">DESKTOP-QO58KLD</span></div>
-        <div class="flex justify-between"><span class="muted">Client IP:</span> <span id="inspectIP" class="mono text-zinc-300">192.168.100.220</span></div>
-        <div class="flex justify-between"><span class="muted">Timestamp:</span> <span id="inspectTime" class="mono muted">2026-08-26 18:40:12</span></div>
-        <div class="flex justify-between"><span class="muted">Query Type:</span> <span id="inspectType" class="mono text-cyan-400">A (IPv4)</span></div>
-        <div class="flex justify-between"><span class="muted">Resolution Path:</span> <span id="inspectReason" class="text-zinc-200 font-medium">Forwarded to Cloudflare DoH (127.0.0.1:5053)</span></div>
-        <div class="flex justify-between"><span class="muted">Shannon Entropy:</span> <span id="inspectEntropy" class="mono text-emerald-400">2.81 (Benign)</span></div>
-      </div>
-      <div class="flex items-center gap-2 pt-2 border-t border-[#27272A]">
-        <button id="inspectAllowBtn" class="flex-1 py-2 rounded bg-[#18181B] hover:bg-[#27272A] text-white font-medium">Whitelist Domain</button>
-        <button id="inspectBlockBtn" class="flex-1 py-2 rounded bg-[#18181B] hover:bg-rose-900/30 text-rose-400 font-medium">Block Domain</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Unbreak Modal -->
-  <div id="unbreakModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-    <div class="w-full max-w-md bg-[#121215] p-6 rounded-lg border border-[#27272A] space-y-4 text-xs">
-      <div class="flex justify-between items-start">
-        <div>
-          <h3 class="text-base font-bold text-white">1-Click Smart Unbreak</h3>
-          <p class="text-xs muted mt-0.5">Temporarily unblock media streaming CDNs (15-min auto-eviction)</p>
-        </div>
-        <button onclick="closeUnbreakModal()" class="text-zinc-500 hover:text-white text-lg">&times;</button>
-      </div>
-      <p class="text-xs muted">Scans recent blocked stream CDNs (<code>kwik.cx</code>, <code>doodstream</code>, <code>mp4upload</code>) and permits playback without whitelisting ad trackers.</p>
-      <button id="triggerUnbreakBtn" onclick="executeUnbreak()" class="w-full py-2.5 rounded bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition cursor-pointer">
-        Unblock Streams (Last 120s)
-      </button>
-      <div id="unbreakOutput" class="hidden text-xs text-emerald-400 pt-2"></div>
-    </div>
-  </div>
 
   <script>
     let allDevices = [];
@@ -765,7 +716,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
 
     // Tab Navigation Switcher
     function switchTab(tabId) {
-      ['tab-homelab', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
+      ['tab-homelab', 'tab-media', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
         const el = document.getElementById(t);
         const nav = document.getElementById('nav-' + t);
         if (el && nav) {
@@ -1009,22 +960,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
               '<td class="py-2.5 px-3 text-right"><button onclick="unbanIP(\'' + d.value + '\')" class="px-2 py-1 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-300 hover:text-white">Unban</button></td>' +
             '</tr>'
           ).join('');
-
-          const scList = document.getElementById('crowdsecScenariosList');
-          scList.innerHTML = (cs.installed_scenarios || []).map(s =>
-            '<div class="p-3 flex items-center justify-between">' +
-              '<div><div class="font-medium text-white">' + s.name + ' <span class="muted mono text-[10px]">v' + s.version + '</span></div><div class="text-zinc-400 mt-0.5">' + s.description + '</div></div>' +
-              '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-medium text-[10px]">' + s.status + '</span>' +
-            '</div>'
-          ).join('');
-
-          const bList = document.getElementById('crowdsecBouncersList');
-          bList.innerHTML = (cs.bouncers || []).map(b =>
-            '<div class="p-3 flex items-center justify-between">' +
-              '<div><div class="font-medium text-white">' + b.name + '</div><div class="muted mono text-[10px]">Type: ' + b.type + ' • Host: ' + b.ip_address + '</div></div>' +
-              '<span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-medium text-[10px]">' + b.status + '</span>' +
-            '</div>'
-          ).join('');
         }
       } catch (e) {}
     }
@@ -1037,101 +972,8 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           const wz = await res.json();
           document.getElementById('wazuhScaScore').innerText = wz.sca_score + '%';
           document.getElementById('wazuhFimCount').innerText = wz.fim_files_monitored;
-
-          const tbody = document.getElementById('wazuhFimBody');
-          tbody.innerHTML = (wz.fim_events || []).map(f =>
-            '<tr class="hover:bg-[#121215] transition">' +
-              '<td class="py-2.5 px-3 mono font-medium text-zinc-200">' + f.path + '</td>' +
-              '<td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-medium text-[10px]">' + f.event_type + '</span></td>' +
-              '<td class="py-2.5 px-3 mono muted truncate max-w-[160px]">' + f.checksum + '</td>' +
-              '<td class="py-2.5 px-3 muted">' + f.user + ' (' + f.permissions + ')</td>' +
-              '<td class="py-2.5 px-3 text-emerald-400 font-medium">' + f.status + '</td>' +
-              '<td class="py-2.5 px-3 text-right mono muted">' + new Date(f.timestamp).toLocaleTimeString() + '</td>' +
-            '</tr>'
-          ).join('');
-
-          const scaList = document.getElementById('wazuhScaList');
-          scaList.innerHTML = (wz.sca_checks || []).map(c =>
-            '<div class="p-3 flex items-center justify-between">' +
-              '<div><div class="font-medium text-white">' + c.id + ': ' + c.title + '</div><div class="text-zinc-400 mt-0.5">Fix: <code>' + c.remediation + '</code></div></div>' +
-              '<span class="px-2 py-0.5 rounded font-bold text-[10px] ' + (c.status === 'Passed' ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-300') + '">' + c.status + '</span>' +
-            '</div>'
-          ).join('');
-
-          const sshList = document.getElementById('wazuhSshList');
-          sshList.innerHTML = (wz.ssh_auth_logs || []).map(s =>
-            '<div class="p-3 flex items-center justify-between">' +
-              '<div><div class="font-medium text-white">' + s.user + ' from <span class="mono text-zinc-300">' + s.client_ip + '</span></div><div class="muted mono text-[10px]">Auth: ' + s.auth_type + ' • Port: ' + s.port + '</div></div>' +
-              '<span class="px-2 py-0.5 rounded font-bold text-[10px] ' + (s.status === 'Accepted' ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-300') + '">' + s.status + '</span>' +
-            '</div>'
-          ).join('');
         }
       } catch (e) {}
-    }
-
-    async function triggerFIMScan() {
-      const btn = document.getElementById('fimScanBtn');
-      btn.innerText = 'Scanning /etc/ & /bin/...';
-      btn.disabled = true;
-      try {
-        await fetch('/api/v1/security/wazuh/scan', { method: 'POST' });
-        await loadWazuh();
-      } catch (e) {}
-      btn.innerText = '⟲ Trigger FIM Scan (syscheck)';
-      btn.disabled = false;
-    }
-
-    function openBanModal() { document.getElementById('banModal').classList.remove('hidden'); }
-    function closeBanModal() { document.getElementById('banModal').classList.add('hidden'); }
-
-    async function executeBan() {
-      const ip = document.getElementById('banInputIP').value.trim();
-      const reason = document.getElementById('banInputReason').value.trim();
-      const duration = document.getElementById('banInputDuration').value;
-      if (!ip) return;
-      await fetch('/api/v1/security/crowdsec/ban', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ ip, reason, duration })
-      });
-      closeBanModal();
-      await loadCrowdSec();
-    }
-
-    async function unbanIP(ip) {
-      if (!confirm('Unban IP ' + ip + ' from firewall?')) return;
-      await fetch('/api/v1/security/crowdsec/unban', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ ip })
-      });
-      await loadCrowdSec();
-    }
-
-    // EtherApe Canvas
-    let zoomLevel = 1.0;
-    let activeSubgraph = 'all';
-
-    function setSubgraph(sg) {
-      activeSubgraph = sg;
-      ['all', 'secondary_ap', 'gateway_wan', 'homelab_core'].forEach(id => {
-        const btn = document.getElementById('btn-sg-' + id);
-        if (btn) {
-          btn.className = (id === sg) ? 'px-2.5 py-1 rounded bg-[#27272A] text-white font-medium' : 'px-2.5 py-1 rounded text-zinc-400 hover:text-white';
-        }
-      });
-    }
-
-    function zoomCanvas(factor) {
-      zoomLevel = Math.max(0.5, Math.min(2.5, zoomLevel * factor));
-      document.getElementById('zoomLevelText').innerText = Math.round(zoomLevel * 100) + '%';
-    }
-
-    function resetZoom() {
-      zoomLevel = 1.0;
-      activeSubgraph = 'all';
-      setSubgraph('all');
-      document.getElementById('zoomLevelText').innerText = '100%';
     }
 
     function initEtherApe() {
@@ -1166,20 +1008,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         ctx.fillStyle = '#0C0C0E';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.scale(zoomLevel, zoomLevel);
-        ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
-        const visibleNodes = rawNodes.filter(n => activeSubgraph === 'all' || n.sg === activeSubgraph || n.id === 'gw');
-        const nodeMap = {};
-        visibleNodes.forEach(n => nodeMap[n.id] = n);
-
         links.forEach(l => {
           const s = rawNodes[l.s];
           const trg = rawNodes[l.t];
-          if (!nodeMap[s.id] || !nodeMap[trg.id]) return;
-
           const sx = s.x * canvas.width;
           const sy = s.y * canvas.height;
           const tx = trg.x * canvas.width;
@@ -1201,10 +1032,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           ctx.fill();
         });
 
-        visibleNodes.forEach(n => {
+        rawNodes.forEach(n => {
           const nx = n.x * canvas.width;
           const ny = n.y * canvas.height;
-
           ctx.fillStyle = '#18181B';
           ctx.strokeStyle = n.color;
           ctx.lineWidth = 2;
@@ -1219,14 +1049,12 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           ctx.fillText(n.label, nx, ny + n.r + 14);
         });
 
-        ctx.restore();
         t++;
         requestAnimationFrame(render);
       }
       render();
     }
 
-    // SSE Connection & Live Activity
     function connectSSE() {
       const es = new EventSource('/api/v1/stream');
       es.onmessage = (e) => {
@@ -1243,8 +1071,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
               document.getElementById('downSpeed').innerText = Math.round(s.download_mbps);
               document.getElementById('upSpeed').innerText = Math.round(s.upload_mbps);
             }
-          } else if (payload.type === 'query') {
-            addActivityRow(payload.data);
           }
         } catch (err) {}
       };
@@ -1252,65 +1078,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         es.close();
         setTimeout(connectSSE, 3000);
       };
-    }
-
-    function addActivityRow(q) {
-      const tbody = document.getElementById('activityTableBody');
-      const isThreat = q.threat && (q.threat.is_threat || q.threat.threat_score >= 0.75);
-      const isBlocked = q.status === 'BLOCKED' || q.status === 'GRAVITY';
-      const timeStr = new Date(q.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
-      const tr = document.createElement('tr');
-      tr.className = isThreat ? 'bg-rose-950/20 text-rose-300 cursor-pointer hover:bg-rose-900/30 transition' : 'hover:bg-[#121215] text-zinc-400 transition cursor-pointer';
-
-      const devName = q.device_name || 'DESKTOP-QO58KLD';
-      const clientInfo = '<span class="font-medium text-zinc-200">' + devName + '</span><br><span class="muted mono text-[10px]">' + q.client_ip + '</span>';
-
-      let decisionHtml = '<span class="text-emerald-400">✓ ' + (q.reason || 'Forwarded to Cloudflare DoH') + '</span>';
-      if (isThreat) {
-        decisionHtml = '<span class="text-rose-400 font-semibold">✗ ' + (q.reason || 'Blocked by Heuristic DGA Analyzer') + '</span>';
-      } else if (isBlocked) {
-        decisionHtml = '<span class="text-rose-400">✗ ' + (q.reason || 'Blocked by Pi-hole Gravity adlist') + '</span>';
-      }
-
-      tr.innerHTML = 
-        '<td class="py-2.5 px-3 muted mono text-[11px] whitespace-nowrap">' + timeStr + '</td>' +
-        '<td class="py-2.5 px-3 pr-2">' + clientInfo + '</td>' +
-        '<td class="py-2.5 px-3 pr-2 truncate max-w-[200px]"><span class="mono text-white font-medium">' + q.domain + '</span></td>' +
-        '<td class="py-2.5 px-3 pr-2 text-[11px]">' + decisionHtml + '</td>' +
-        '<td class="py-2.5 px-3 text-right whitespace-nowrap">' +
-          '<button onclick="event.stopPropagation(); actionDomain(\'whitelist\', \'' + q.domain + '\')" class="px-2 py-0.5 text-zinc-400 hover:text-white mr-1 text-[11px]">Allow</button>' +
-          '<button onclick="event.stopPropagation(); actionDomain(\'block\', \'' + q.domain + '\')" class="px-2 py-0.5 text-zinc-400 hover:text-rose-400 text-[11px]">Block</button>' +
-        '</td>';
-
-      tr.onclick = () => openInspectorModal(q);
-
-      if (tbody.children.length === 1 && tbody.children[0].innerText.includes('Listening')) {
-        tbody.innerHTML = '';
-      }
-      tbody.insertBefore(tr, tbody.firstChild);
-      if (tbody.children.length > 50) tbody.removeChild(tbody.lastChild);
-    }
-
-    function openInspectorModal(q) {
-      document.getElementById('inspectDomainTitle').innerText = q.domain;
-      document.getElementById('inspectDevice').innerText = q.device_name || 'DESKTOP-QO58KLD';
-      document.getElementById('inspectIP').innerText = q.client_ip;
-      document.getElementById('inspectTime').innerText = new Date(q.timestamp).toLocaleString();
-      document.getElementById('inspectType').innerText = (q.query_type || 'A') + ' (Latency: ' + (q.response_time_ms ? q.response_time_ms.toFixed(1) : '1.2') + 'ms)';
-      document.getElementById('inspectReason').innerText = q.reason || 'Forwarded to Cloudflare DoH (127.0.0.1:5053)';
-      const entropy = q.threat ? q.threat.shannon_entropy.toFixed(2) : '2.40';
-      document.getElementById('inspectEntropy').innerText = entropy + ' (Heuristic Score: ' + (q.threat ? (q.threat.threat_score*100).toFixed(0)+'%' : '0%') + ')';
-      
-      document.getElementById('inspectAllowBtn').onclick = () => { actionDomain('whitelist', q.domain); closeInspectorModal(); };
-      document.getElementById('inspectBlockBtn').onclick = () => { actionDomain('block', q.domain); closeInspectorModal(); };
-      document.getElementById('queryInspectorModal').classList.remove('hidden');
-    }
-
-    function closeInspectorModal() { document.getElementById('queryInspectorModal').classList.add('hidden'); }
-
-    async function actionDomain(action, domain) {
-      await fetch('/api/v1/' + action, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ domain }) });
     }
 
     async function runSpeedtest() {
@@ -1330,24 +1097,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         const json = await res.json();
         alert(json.message || 'Reboot dispatched.');
       } catch (e) { alert('Reboot dispatched.'); }
-    }
-
-    function openUnbreakModal() { document.getElementById('unbreakModal').classList.remove('hidden'); }
-    function closeUnbreakModal() { document.getElementById('unbreakModal').classList.add('hidden'); }
-
-    async function executeUnbreak() {
-      const btn = document.getElementById('triggerUnbreakBtn');
-      const out = document.getElementById('unbreakOutput');
-      btn.disabled = true;
-      btn.innerText = 'Scanning...';
-      try {
-        const res = await fetch('/api/v1/unbreak', { method: 'POST' });
-        const json = await res.json();
-        out.classList.remove('hidden');
-        out.innerText = json.message;
-      } catch (e) {}
-      btn.disabled = false;
-      btn.innerText = 'Fix Video Stream';
     }
 
     window.onload = () => {

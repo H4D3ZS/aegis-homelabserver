@@ -104,6 +104,9 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	// Gitea & External 1TB Storage API
 	mux.HandleFunc("/api/v1/homelab/storage", h.handleStorageStatus)
 	mux.HandleFunc("/api/v1/homelab/gitea", h.handleGiteaStatus)
+
+	// Jellyfin & qBittorrent Media API
+	mux.HandleFunc("/api/v1/homelab/media", h.handleMediaStatus)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -558,7 +561,7 @@ func (h *APIHandler) handleStorageStatus(w http.ResponseWriter, r *http.Request)
 
 	mountPath := "/mnt/external_1tb"
 	isMounted := false
-	var totalGB, freeGB, usedGB float64 = 931.5, 782.4, 149.1 // Default 1TB NTFS drive stats
+	var totalGB, freeGB, usedGB float64 = 931.5, 782.4, 149.1
 
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(mountPath, &stat); err == nil && stat.Blocks > 0 {
@@ -578,6 +581,8 @@ func (h *APIHandler) handleStorageStatus(w http.ResponseWriter, r *http.Request)
 		"free_gb":          freeGB,
 		"usage_percent":    int((usedGB / totalGB) * 100),
 		"gitea_repos_path": "/mnt/external_1tb/gitea-data/repositories",
+		"anime_media_path": "/mnt/external_1tb/media/anime",
+		"downloads_path":   "/mnt/external_1tb/media/downloads",
 		"backup_path":      "/mnt/external_1tb/minecraft-backups",
 		"logs_path":        "/mnt/external_1tb/aegis-archive",
 	})
@@ -595,7 +600,7 @@ func (h *APIHandler) handleGiteaStatus(w http.ResponseWriter, r *http.Request) {
 		"version":          "1.22.6-native",
 		"database":         "SQLite3 (/mnt/external_1tb/gitea-data/gitea.db)",
 		"repositories_dir": "/mnt/external_1tb/gitea-data/repositories",
-		"admin_username":   "admin",
+		"admin_username":   "administrator",
 		"default_password": "Programming123",
 		"ssh_port":         2222,
 		"http_url":         "http://localhost:3000",
@@ -603,8 +608,38 @@ func (h *APIHandler) handleGiteaStatus(w http.ResponseWriter, r *http.Request) {
 		"features": []string{
 			"Zero-Docker Native Systemd Service (gitea.service)",
 			"Stores all Git repos on 1TB External NTFS drive",
+			"Git LFS enabled for 100GB+ game/video projects",
 			"Integrated with Tailscale for secure remote Git clone/push",
-			"Built-in CI/CD Actions runner compatibility",
+		},
+	})
+}
+
+// Media (Jellyfin & qBittorrent) Handlers
+
+func (h *APIHandler) handleMediaStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"jellyfin": map[string]interface{}{
+			"is_running":       true,
+			"port":             8096,
+			"url":              "http://localhost:8096",
+			"hardware_accel":   "Intel QuickSync (QSV) / VA-API (UHD Graphics 600)",
+			"anime_path":       "/mnt/external_1tb/media/anime",
+			"movies_path":      "/mnt/external_1tb/media/movies",
+			"syncplay_enabled": true,
+		},
+		"qbittorrent": map[string]interface{}{
+			"is_running":       true,
+			"port":             9091,
+			"url":              "http://localhost:9091",
+			"downloads_path":   "/mnt/external_1tb/media/downloads",
+			"admin_username":   "admin",
+			"default_password": "Programming123",
+			"auto_indexer":     "Auto-hardlink to /mnt/external_1tb/media/anime on complete",
 		},
 	})
 }

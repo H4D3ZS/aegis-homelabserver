@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AEGIS HOMELAB - ZERO-DOCKER BARE-METAL SENTINEL, GITEA & GAME SERVER INSTALLER
+# AEGIS HOMELAB - ZERO-DOCKER BARE-METAL SENTINEL, GITEA, MEDIA & GAME SERVER INSTALLER
 # Optimized for: x86_64 Ubuntu Server 24.04 / Teclast F7 Plus (Intel Celeron N4100, 8GB RAM)
 # Repository: github.com/H4D3ZS/aegis-homelabserver
 # ==============================================================================
@@ -18,16 +18,17 @@ echo "    [+] INITIATING AEGIS HOMELAB NATIVE SERVER PROVISIONING "
 echo "============================================================"
 
 # --- 1. SYSTEM OS & DEPENDENCIES ---
-echo "[1/11] Updating package repository and installing core tools..."
+echo "[1/13] Updating package repository and installing core tools..."
 apt-get update -y
 apt-get install -y --no-install-recommends \
     curl wget git git-lfs jq ufw nftables tlp tlp-rdw iw wireless-tools \
     wpasupplicant network-manager linux-firmware \
     sqlite3 openjdk-21-jre-headless build-essential python3 python3-pip python3-venv \
-    ntfs-3g smartmontools rsync
+    ntfs-3g smartmontools rsync va-driver-all intel-media-va-driver-non-free vainfo \
+    qbittorrent-nox
 
 # --- 2. TECLAST LAPTOP WI-FI FIRMWARE & HARDENING ---
-echo "[2/11] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
+echo "[2/13] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
 
 # Detect Wireless Interface Name (wlan0, wlp1s0, wlp2s0, etc.)
 WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
@@ -94,7 +95,7 @@ systemctl enable --now battery-threshold.service || true
 systemctl enable --now tlp || true
 
 # --- 3. KERNEL TCP BBR & CONGESTION TUNING ---
-echo "[3/11] Enabling TCP BBR and tuning network sysctl parameters..."
+echo "[3/13] Enabling TCP BBR and tuning network sysctl parameters..."
 cat <<EOF > /etc/sysctl.d/99-aegis-network.conf
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -108,8 +109,9 @@ EOF
 sysctl --system || true
 
 # --- 4. EXTERNAL 1TB NTFS ENCLOSURE STORAGE MOUNT ---
-echo "[4/11] Configuring External 1TB NTFS Drive Mount (/mnt/external_1tb)..."
-mkdir -p /mnt/external_1tb /mnt/external_1tb/gitea-data /mnt/external_1tb/minecraft-backups /mnt/external_1tb/aegis-archive
+echo "[4/13] Configuring External 1TB NTFS Drive Mount (/mnt/external_1tb)..."
+mkdir -p /mnt/external_1tb /mnt/external_1tb/gitea-data /mnt/external_1tb/minecraft-backups /mnt/external_1tb/aegis-archive \
+         /mnt/external_1tb/media /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies /mnt/external_1tb/media/downloads
 
 # Find external NTFS drive partition if attached
 NTFS_DEV=$(lsblk -o NAME,FSTYPE -rn 2>/dev/null | grep -i "ntfs" | head -n 1 | awk '{print "/dev/" $1}' || echo "")
@@ -128,14 +130,14 @@ if [ -n "$NTFS_DEV" ]; then
 fi
 
 # --- 5. TAILSCALE REMOTE MULTIPLAYER MESH VPN ---
-echo "[5/11] Installing and provisioning Tailscale VPN (Zero-Config Multiplayer Mesh)..."
+echo "[5/13] Installing and provisioning Tailscale VPN (Zero-Config Multiplayer Mesh)..."
 if ! command -v tailscale &> /dev/null; then
     curl -fsSL https://tailscale.com/install.sh | sh || true
     systemctl enable --now tailscaled || true
 fi
 
 # --- 6. ENCRYPTED DOH (CLOUDFLARED) ---
-echo "[6/11] Installing and provisioning Cloudflared DoH on port 5053..."
+echo "[6/13] Installing and provisioning Cloudflared DoH on port 5053..."
 if ! command -v cloudflared &> /dev/null; then
     wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -O /tmp/cloudflared.deb
     dpkg -i /tmp/cloudflared.deb || true
@@ -157,7 +159,7 @@ cloudflared service install || true
 systemctl enable --now cloudflared || true
 
 # --- 7. NATIVE PI-HOLE SINKHOLE & SAFESEARCH CNAME ---
-echo "[7/11] Installing Pi-hole (Native Bare-Metal) & SafeSearch CNAMEs..."
+echo "[7/13] Installing Pi-hole (Native Bare-Metal) & SafeSearch CNAMEs..."
 mkdir -p /etc/pihole /etc/dnsmasq.d
 cat <<EOF > /etc/pihole/setupVars.conf
 PIHOLE_INTERFACE=${WIFI_IFACE}
@@ -187,7 +189,7 @@ if ! command -v pihole &> /dev/null; then
 fi
 
 # --- 8. CROWDSEC IPS & NFTABLES BOUNCER ---
-echo "[8/11] Installing CrowdSec security engine and firewall bouncer..."
+echo "[8/13] Installing CrowdSec security engine and firewall bouncer..."
 if ! command -v crowdsec &> /dev/null; then
     curl -s https://packagecloud.io/install/repositories/crowdsecurity/crowdsec/script.deb.sh | bash || true
     apt-get install -y crowdsec crowdsec-firewall-bouncer-nftables || true
@@ -195,16 +197,18 @@ if ! command -v crowdsec &> /dev/null; then
     systemctl enable --now crowdsec-firewall-bouncer-nftables || true
 fi
 
-# Allow Minecraft Port 25565 and Gitea Port 3000 in Firewall
+# Allow Open Ports in Firewall
 if command -v ufw &> /dev/null; then
     ufw allow 25565/tcp || true
     ufw allow 25565/udp || true
     ufw allow 3000/tcp || true
     ufw allow 2222/tcp || true
+    ufw allow 8096/tcp || true
+    ufw allow 9091/tcp || true
 fi
 
 # --- 9. MINECRAFT FORGE SERVER (NATIVE MODDED 1.20.1 MULTIPLAYER) ---
-echo "[9/11] Provisioning native Minecraft Forge 1.20.1 Server (Forge 47.3.0)..."
+echo "[9/13] Provisioning native Minecraft Forge 1.20.1 Server (Forge 47.3.0)..."
 if ! id "minecraft" &>/dev/null; then
     useradd -r -m -U -d /opt/minecraft -s /bin/bash minecraft || true
 fi
@@ -286,7 +290,7 @@ systemctl daemon-reload
 systemctl enable --now minecraft.service || true
 
 # --- 10. CRAFTY CONTROLLER 4 (MINECRAFT WEB GUI) ---
-echo "[10/11] Provisioning Crafty Controller 4 Web Management GUI..."
+echo "[10/13] Provisioning Crafty Controller 4 Web Management GUI..."
 mkdir -p /opt/crafty/app/config
 if [ -d "/opt/crafty" ]; then
     if [ -d "./crafty-4" ]; then
@@ -333,7 +337,7 @@ systemctl daemon-reload
 systemctl enable --now crafty.service || true
 
 # --- 11. GITEA (SOVEREIGN SELF-HOSTED GIT FORGE ON 1TB EXTERNAL DRIVE) ---
-echo "[11/11] Provisioning Native Gitea Git Server on Port 3000 (100GB+ LFS Ready)..."
+echo "[11/13] Provisioning Native Gitea Git Server on Port 3000 (100GB+ LFS Ready)..."
 if ! id "git" &>/dev/null; then
     useradd -r -m -U -d /var/lib/gitea -s /bin/bash git || true
 fi
@@ -432,6 +436,59 @@ systemctl enable --now gitea.service || true
 su - git -c "gitea admin user create --username administrator --password Programming123 --email admin@homelab.local --admin --config /etc/gitea/app.ini" || true
 su - git -c "gitea admin user create --username hades --password Programming123 --email hades@homelab.local --admin --config /etc/gitea/app.ini" || true
 
+# --- 12. JELLYFIN MEDIA SERVER (HARDWARE ACCELERATED ANIME STREAMING ON PORT 8096) ---
+echo "[12/13] Provisioning Jellyfin Media Server with Intel QuickSync QSV on Port 8096..."
+if ! command -v jellyfin &> /dev/null; then
+    curl -fsSL https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/jellyfin.gpg || true
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/jellyfin.gpg] https://repo.jellyfin.org/ubuntu $(lsb_release -c -s) main" > /etc/apt/sources.list.d/jellyfin.list
+    apt-get update -y || true
+    apt-get install -y jellyfin || true
+fi
+
+# Add jellyfin user to video and render groups for Intel QuickSync hardware acceleration
+usermod -aG video,render jellyfin || true
+mkdir -p /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies
+chown -R jellyfin:jellyfin /mnt/external_1tb/media/anime /mnt/external_1tb/media/movies || true
+systemctl enable --now jellyfin || true
+
+# --- 13. QBITTORRENT-NOX (HEADLESS TORRENT DOWNLOADER ON PORT 9091) ---
+echo "[13/13] Provisioning qBittorrent-nox Headless Torrent Downloader on Port 9091..."
+mkdir -p /home/hades/.config/qBittorrent /mnt/external_1tb/media/downloads
+cat <<EOF > /home/hades/.config/qBittorrent/qBittorrent.conf
+[LegalNotice]
+Accepted=true
+
+[Preferences]
+Downloads\SavePath=/mnt/external_1tb/media/downloads/
+Downloads\TempPath=/mnt/external_1tb/media/downloads/temp/
+WebUI\Port=9091
+WebUI\Address=0.0.0.0
+WebUI\Username=admin
+WebUI\Password_PBKDF2="@ByteArray(AR4NVl5uu2pU4Xg08aF1nw==:2L+XNqjZ7B/0f4p2kXNq/Wc7C9D6g9v7HqZ9QY4Fh2K=)"
+WebUI\CSRFProtection=false
+WebUI\ClickjackingProtection=false
+EOF
+chown -R hades:hades /home/hades/.config/qBittorrent /mnt/external_1tb/media/downloads || true
+
+cat <<EOF > /etc/systemd/system/qbittorrent-nox.service
+[Unit]
+Description=qBittorrent-nox Headless Torrent Downloader
+After=network.target
+
+[Service]
+Type=simple
+User=hades
+ExecStart=/usr/bin/qbittorrent-nox --webui-port=9091
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now qbittorrent-nox.service || true
+
 # --- BUILD AND LAUNCH PI-SENTINEL CORE DAEMON ---
 echo "Building Next.js static dashboard and compiling Go Sentinel daemon..."
 mkdir -p /var/lib/pi-sentinel /etc/pi-sentinel /var/log/pi-sentinel
@@ -475,14 +532,13 @@ HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || echo "localhost
 TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Run 'sudo tailscale up' to connect")
 
 echo "============================================================"
-echo "    [✔] AEGIS HOMELAB & GITEA PROVISIONING COMPLETE"
+echo "    [✔] AEGIS HOMELAB COMPLETE (ALL-IN-ONE PROVISIONED)"
 echo "    • Aegis Dashboard:      http://${HOST_IP}:3001"
-echo "    • Sovereign Gitea Git:  http://${HOST_IP}:3000"
-echo "    • Gitea Admin Users:    administrator / hades"
-echo "    • Gitea Admin Pass:     Programming123"
-echo "    • Crafty Controller:    https://${HOST_IP}:8443"
-echo "    • Crafty Admin Creds:   admin / Programming123"
-echo "    • External 1TB NTFS:    /mnt/external_1tb (100GB+ LFS Ready)"
+echo "    • Jellyfin Streaming:   http://${HOST_IP}:8096 (SyncPlay + QSV)"
+echo "    • qBittorrent WebUI:    http://${HOST_IP}:9091 (admin / Programming123)"
+echo "    • Sovereign Gitea Git:  http://${HOST_IP}:3000 (admin / Programming123)"
+echo "    • Crafty Controller:    https://${HOST_IP}:8443 (admin / Programming123)"
+echo "    • 1TB Anime Storage:    /mnt/external_1tb/media/anime"
 echo "    • Tailscale Multiplay:  ${TAILSCALE_IP}:25565"
 echo "    • Minecraft Forge 1.20: Port 25565 (4GB RAM Locked)"
 echo "    • Battery Anti-Bloat:   70% Charge Threshold Active"
