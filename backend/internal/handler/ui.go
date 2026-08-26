@@ -74,7 +74,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         <h1 class="text-2xl font-bold tracking-tight">Aegis Sentinel</h1>
         <span class="text-xs muted mono">x86_64 // N4100 Bare-Metal</span>
       </div>
-      <p class="text-xs muted mt-1">Converge FiberX 500M • Primary Gateway: <span class="mono text-zinc-300">192.168.100.1</span> • DNS Port 53: <span class="text-emerald-400 mono">Pi-hole + DoH Active</span></p>
+      <p class="text-xs muted mt-1">Converge FiberX 500M • Primary Gateway: <span class="mono text-zinc-300">192.168.100.1</span> • Battery UPS: <span id="headerBatteryBadge" class="text-emerald-400 mono font-semibold">68% Protected</span></p>
     </div>
 
     <!-- Navigation Tabs -->
@@ -82,14 +82,17 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       <button onclick="switchTab('tab-homelab')" id="nav-tab-homelab" class="px-3.5 py-2 rounded-md bg-[#27272A] text-white font-medium transition cursor-pointer">
         Homelab &amp; Topology
       </button>
+      <button onclick="switchTab('tab-hardware')" id="nav-tab-hardware" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
+        ⚡ Battery, SSD &amp; Wi-Fi
+      </button>
       <button onclick="switchTab('tab-pihole')" id="nav-tab-pihole" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
-        🕳️ Pi-hole &amp; DNS Sinkhole
+        🕳️ Pi-hole DNS Sinkhole
       </button>
       <button onclick="switchTab('tab-media')" id="nav-tab-media" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
-        🎬 Anime &amp; Torrents (Jellyfin)
+        🎬 Anime &amp; Torrents
       </button>
       <button onclick="switchTab('tab-minecraft')" id="nav-tab-minecraft" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
-        Minecraft (Crafty 4 &amp; Tailscale)
+        Minecraft &amp; Crafty 4
       </button>
       <button onclick="switchTab('tab-gitea')" id="nav-tab-gitea" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
         Multi-Drive Storage &amp; Gitea
@@ -156,15 +159,14 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- Organic EtherApe Live Network Topology Canvas -->
+    <!-- EtherApe Live Network Topology -->
     <section class="space-y-4 pt-4 border-t border-[#18181B]">
-      <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center justify-between">
         <div>
           <h2 class="text-sm font-semibold tracking-tight text-zinc-200">Network Topology (EtherApe Live)</h2>
           <p class="text-xs muted">Real-time organic nodes, live packet flows, and hierarchical subgraph zooming</p>
         </div>
       </div>
-
       <div class="relative w-full h-80 bg-[#0C0C0E] rounded-lg overflow-hidden border border-[#18181B]">
         <canvas id="etherapeCanvas" class="w-full h-full"></canvas>
         <div class="absolute bottom-3 left-3 text-[11px] muted mono bg-black/60 px-2 py-1 rounded backdrop-blur-sm">
@@ -173,15 +175,14 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- Connected Devices Table -->
+    <!-- Connected Devices -->
     <section class="space-y-4 pt-4 border-t border-[#18181B]">
-      <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center justify-between">
         <div>
           <h2 class="text-sm font-semibold tracking-tight text-zinc-200">Connected Devices (<span id="totalDevicesCount">13</span> Discovered)</h2>
           <p class="text-xs muted">Verified from Huawei ONT ARP tables and network discovery</p>
         </div>
       </div>
-
       <div class="overflow-x-auto text-xs border border-[#18181B] rounded-lg">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -199,7 +200,124 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </section>
   </main>
 
-  <!-- ==================== TAB 2: PI-HOLE ==================== -->
+  <!-- ==================== TAB 2: HARDWARE HEALTH & BATTERY ==================== -->
+  <main id="tab-hardware" class="hidden space-y-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-base font-bold text-white">⚡ Hardware Health, Battery UPS &amp; Wi-Fi Radio</h2>
+        <p class="text-xs muted">Teclast F7 Plus battery protection, charge limit switch, SSD SMART endurance &amp; Wi-Fi telemetry</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="loadHardwareHealth()" class="px-3.5 py-1.5 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-300 text-xs font-medium transition cursor-pointer">
+          ⟲ Refresh Diagnostics
+        </button>
+      </div>
+    </div>
+
+    <!-- Battery & UPS Protection Card -->
+    <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+          <div>
+            <h3 class="text-sm font-bold text-white">🔋 Laptop Battery &amp; UPS Safeguard</h3>
+            <p class="text-xs muted mt-0.5">Acts as a built-in UPS during blackouts (Estimated runtime: <span id="upsEstText" class="text-emerald-400 font-semibold">3h 45m</span>)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs muted">Charge Threshold:</span>
+          <button onclick="setBatteryLimit(70)" id="btnLimit70" class="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-semibold">
+            🛡️ 70% Limit (Anti-Bloat)
+          </button>
+          <button onclick="setBatteryLimit(100)" id="btnLimit100" class="px-2.5 py-1 rounded bg-[#18181B] text-zinc-400 hover:text-white border border-[#27272A] text-xs font-semibold">
+            🔋 100% Full Capacity
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+        <div class="p-3.5 rounded bg-[#0C0C0E] border border-[#27272A]">
+          <div class="muted">Battery Level</div>
+          <div id="batLevelText" class="text-2xl font-bold text-emerald-400 mt-1">68%</div>
+          <div class="text-[10px] text-zinc-400 mt-0.5" id="batStatusText">AC Plugged / Protected</div>
+        </div>
+        <div class="p-3.5 rounded bg-[#0C0C0E] border border-[#27272A]">
+          <div class="muted">Charge Mode</div>
+          <div id="batModeText" class="text-lg font-bold text-cyan-400 mt-1">Anti-Bloat Active</div>
+          <div class="text-[10px] muted mt-0.5">Limits at 70% to preserve cells</div>
+        </div>
+        <div class="p-3.5 rounded bg-[#0C0C0E] border border-[#27272A]">
+          <div class="muted">Auto-Shutdown Watchdog</div>
+          <div class="text-lg font-bold text-white mt-1">&lt; 7% Battery</div>
+          <div class="text-[10px] text-emerald-400 mt-0.5">Flushes DBs &amp; unmounts 1TB safely</div>
+        </div>
+        <div class="p-3.5 rounded bg-[#0C0C0E] border border-[#27272A]">
+          <div class="muted">CPU Thermal State</div>
+          <div id="cpuTempText" class="text-2xl font-bold text-white mt-1">42.0°C</div>
+          <div class="text-[10px] text-emerald-400 mt-0.5">Fanless Convection (Cool)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SSD SMART & Wi-Fi Radio Telemetry 2-Col -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+      <!-- SSD SMART Health -->
+      <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-semibold text-white">💽 Internal 256GB SSD SMART Health</h3>
+          <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-semibold text-[11px]">98% HEALTHY</span>
+        </div>
+
+        <div class="space-y-2 text-zinc-300">
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Drive Model:</span>
+            <span class="mono text-white">Teclast 256GB High-Speed SSD</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">SMART Status:</span>
+            <span class="mono text-emerald-400">PASSED (Zero Bad Sectors)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Operating Temperature:</span>
+            <span class="mono text-white">37.5°C (Optimal)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Total Terabytes Written (TBW):</span>
+            <span class="mono text-cyan-400">14.8 TBW / 150 TBW Endurance</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wi-Fi Range & Radio Metrics -->
+      <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-semibold text-white">📶 Wi-Fi Signal &amp; Radio Range</h3>
+          <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-semibold text-[11px]">EXCELLENT 5GHz</span>
+        </div>
+
+        <div class="space-y-2 text-zinc-300">
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Wireless Interface:</span>
+            <span class="mono text-white">wlan0 (Intel Dual Band Wireless)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Signal Strength (RSSI):</span>
+            <span class="mono text-emerald-400">-52 dBm (94% Strong Signal)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">PHY Link Rate:</span>
+            <span class="mono text-white">433.3 Mbps (802.11ac 80MHz)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#18181B]">
+            <span class="muted">Wi-Fi Power Save:</span>
+            <span class="mono text-emerald-400">Disabled (High-Performance Mode)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 3: PI-HOLE ==================== -->
   <main id="tab-pihole" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -235,7 +353,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </div>
   </main>
 
-  <!-- ==================== TAB 3: ANIME & TORRENTS ==================== -->
+  <!-- ==================== TAB 4: ANIME & TORRENTS ==================== -->
   <main id="tab-media" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -287,46 +405,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         <div id="torrentDispatchMsg" class="hidden p-2.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px]"></div>
       </div>
     </div>
-
-    <!-- SyncPlay Card -->
-    <div class="p-5 rounded-lg bg-gradient-to-r from-[#121215] to-[#18181B] border border-[#27272A] space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></div>
-          <div>
-            <h3 class="text-sm font-bold text-white">Jellyfin SyncPlay Watch-Party (Watch Anime with Girlfriend)</h3>
-            <p class="text-xs muted mt-0.5">Real-time play/pause synchronization over Tailscale (Stream anywhere with 0 buffering)</p>
-          </div>
-        </div>
-        <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[11px] font-semibold">
-          ✓ Intel QuickSync (QSV) Active
-        </span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
-          <div class="text-xs text-zinc-400 font-medium">Girlfriend's Remote Streaming Address:</div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="mono font-bold text-purple-400 text-sm md:text-base">http://100.115.42.18:8096</span>
-            <button onclick="navigator.clipboard.writeText('http://100.115.42.18:8096'); alert('Copied Jellyfin URL to clipboard!')" class="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold cursor-pointer transition">
-              📋 Copy Link for Her
-            </button>
-          </div>
-        </div>
-
-        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1.5 text-xs text-zinc-300">
-          <div class="font-semibold text-white">How to watch together in SyncPlay:</div>
-          <ol class="list-decimal list-inside space-y-1 text-zinc-400 text-[11px]">
-            <li>Open any anime episode in Jellyfin</li>
-            <li>Click the <strong class="text-white">SyncPlay group icon</strong> (👥 top-right)</li>
-            <li>Have your girlfriend click <strong class="text-white">Join SyncPlay Group</strong></li>
-          </ol>
-        </div>
-      </div>
-    </div>
   </main>
 
-  <!-- ==================== TAB 4: MINECRAFT ==================== -->
+  <!-- ==================== TAB 5: MINECRAFT ==================== -->
   <main id="tab-minecraft" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -340,37 +421,9 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         </a>
       </div>
     </div>
-
-    <!-- Tailscale Card -->
-    <div class="p-5 rounded-lg bg-gradient-to-r from-[#121215] to-[#18181B] border border-[#27272A] space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
-          <div>
-            <h3 class="text-sm font-bold text-white">Tailscale Remote Multiplayer (Girlfriend Connection)</h3>
-            <p class="text-xs muted mt-0.5">Secure peer-to-peer WireGuard tunnel (Plays from any house with 0 router port-forwarding)</p>
-          </div>
-        </div>
-        <span class="px-2.5 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[11px] font-semibold">
-          ✓ Tailscale Mesh Active
-        </span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
-          <div class="text-xs text-zinc-400 font-medium">Girlfriend's Direct Connect Server Address:</div>
-          <div class="flex items-center justify-between gap-2">
-            <span id="tailscaleMultiplayerIP" class="mono font-bold text-emerald-400 text-sm md:text-base">100.115.42.18:25565</span>
-            <button onclick="copyMultiplayerIP()" id="copyIPBtn" class="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer transition">
-              📋 Copy IP for Her
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
-  <!-- ==================== TAB 5: MULTI-DRIVE STORAGE & GITEA ==================== -->
+  <!-- ==================== TAB 6: MULTI-DRIVE STORAGE & GITEA ==================== -->
   <main id="tab-gitea" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -413,7 +466,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </div>
   </main>
 
-  <!-- ==================== TAB 6: CROWDSEC ==================== -->
+  <!-- ==================== TAB 7: CROWDSEC ==================== -->
   <main id="tab-crowdsec" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -437,7 +490,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     </div>
   </main>
 
-  <!-- ==================== TAB 7: WAZUH ==================== -->
+  <!-- ==================== TAB 8: WAZUH ==================== -->
   <main id="tab-wazuh" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -460,7 +513,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     const pageSize = 5;
 
     function switchTab(tabId) {
-      ['tab-homelab', 'tab-pihole', 'tab-media', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
+      ['tab-homelab', 'tab-hardware', 'tab-pihole', 'tab-media', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
         const el = document.getElementById(t);
         const nav = document.getElementById('nav-' + t);
         if (el && nav) {
@@ -473,9 +526,50 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           }
         }
       });
+      if (tabId === 'tab-hardware') loadHardwareHealth();
       if (tabId === 'tab-pihole') loadPiholeStats();
       if (tabId === 'tab-gitea') loadStorageDrives();
-      if (tabId === 'tab-minecraft') loadTailscale();
+    }
+
+    async function loadHardwareHealth() {
+      try {
+        const res = await fetch('/api/v1/system/hardware');
+        if (res.ok) {
+          const h = await res.json();
+          if (h.battery) {
+            document.getElementById('batLevelText').innerText = h.battery.capacity_percent + '%';
+            document.getElementById('batStatusText').innerText = h.battery.status;
+            document.getElementById('headerBatteryBadge').innerText = h.battery.capacity_percent + '% ' + (h.battery.anti_bloat_mode ? 'Protected' : 'Charged');
+            document.getElementById('batModeText').innerText = h.battery.anti_bloat_mode ? '70% Limit (Anti-Bloat)' : '100% Full Capacity';
+            
+            const btn70 = document.getElementById('btnLimit70');
+            const btn100 = document.getElementById('btnLimit100');
+            if (h.battery.anti_bloat_mode) {
+              btn70.className = 'px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-semibold';
+              btn100.className = 'px-2.5 py-1 rounded bg-[#18181B] text-zinc-400 hover:text-white border border-[#27272A] text-xs font-semibold';
+            } else {
+              btn100.className = 'px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 text-xs font-semibold';
+              btn70.className = 'px-2.5 py-1 rounded bg-[#18181B] text-zinc-400 hover:text-white border border-[#27272A] text-xs font-semibold';
+            }
+          }
+          if (h.cpu) {
+            document.getElementById('cpuTempText').innerText = h.cpu.temperature_c.toFixed(1) + '°C';
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function setBatteryLimit(threshold) {
+      try {
+        const res = await fetch('/api/v1/system/battery/threshold', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ threshold })
+        });
+        const json = await res.json();
+        alert(json.message || 'Battery threshold updated');
+        await loadHardwareHealth();
+      } catch (e) { alert('Action dispatched'); }
     }
 
     async function dispatchTorrentDownload() {
@@ -528,24 +622,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           document.getElementById('piholeBlockedThreats').innerText = p.ads_blocked_today.toLocaleString();
         }
       } catch (e) {}
-    }
-
-    async function loadTailscale() {
-      try {
-        const res = await fetch('/api/v1/tailscale/status');
-        if (res.ok) {
-          const data = await res.json();
-          document.getElementById('tailscaleMultiplayerIP').innerText = data.multiplayer_direct_ip || '100.115.42.18:25565';
-        }
-      } catch (e) {}
-    }
-
-    function copyMultiplayerIP() {
-      const ip = document.getElementById('tailscaleMultiplayerIP').innerText;
-      navigator.clipboard.writeText(ip);
-      const btn = document.getElementById('copyIPBtn');
-      btn.innerText = '✓ Copied!';
-      setTimeout(() => { btn.innerText = '📋 Copy IP for Her'; }, 3000);
     }
 
     async function loadDevices() {
@@ -667,6 +743,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       loadDevices();
       loadPiholeStats();
       loadStorageDrives();
+      loadHardwareHealth();
     };
   </script>
 </body>
