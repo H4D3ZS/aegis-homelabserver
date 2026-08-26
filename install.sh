@@ -102,12 +102,12 @@ add-apt-repository -y universe || true
 add-apt-repository -y multiverse || true
 apt-get update -y
 
-# Install Core Tools & Storage
-echo "[+] Installing core utilities and storage tools..."
+# Install Core Tools, ACPI, UPower, & Storage
+echo "[+] Installing core utilities, power tools, and storage packages..."
 apt-get install -y --fix-broken || true
 apt-get install -y \
     curl wget git git-lfs jq ufw nftables tlp tlp-rdw iw wireless-tools \
-    wpasupplicant network-manager linux-firmware \
+    wpasupplicant network-manager linux-firmware acpi upower \
     sqlite3 build-essential ntfs-3g smartmontools rsync samba
 
 # Install Java 21 & Python 3
@@ -132,16 +132,13 @@ systemctl restart systemd-resolved || true
 rm -f /etc/resolv.conf
 echo "nameserver 1.1.1.1" > /etc/resolv.conf
 
-# --- 3. TECLAST LAPTOP WI-FI FIRMWARE & HARDENING ---
-echo "[3/15] Configuring Teclast F7 Plus Wi-Fi (Intel iwlwifi / Realtek) & Power Limits..."
+# --- 3. TECLAST LAPTOP BATTERY UPS, HARDENING & SLEEP MASKING ---
+echo "[3/15] Hardening Teclast F7 Plus 24/7 Server, Battery UPS & Power Management..."
 
-WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
-if [ -z "$WIFI_IFACE" ]; then
-    WIFI_IFACE=$(ip link 2>/dev/null | awk -F': ' '/wl/{print $2}' | head -n 1 || echo "wlan0")
-fi
-echo "Detected Wi-Fi Interface: ${WIFI_IFACE}"
+# Mask all sleep and suspend targets (Stay 100% active during AC disconnect / blackout)
+systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target || true
 
-# Prevent laptop from suspending when lid is closed or idle (Keep lid open for thermal convection)
+# Prevent laptop from suspending when lid is closed
 mkdir -p /etc/systemd/logind.conf.d/
 cat <<EOF > /etc/systemd/logind.conf.d/homelab-lid.conf
 [Login]
@@ -151,6 +148,15 @@ HandleLidSwitchExternalPower=ignore
 IdleAction=ignore
 EOF
 systemctl restart systemd-logind || true
+
+# Configure UPower Low-Battery Protection
+if [ -f "/etc/UPower/UPower.conf" ]; then
+    sed -i 's/^PercentageLow=.*/PercentageLow=20/' /etc/UPower/UPower.conf || true
+    sed -i 's/^PercentageCritical=.*/PercentageCritical=10/' /etc/UPower/UPower.conf || true
+    sed -i 's/^PercentageAction=.*/PercentageAction=5/' /etc/UPower/UPower.conf || true
+    sed -i 's/^CriticalPowerAction=.*/CriticalPowerAction=PowerOff/' /etc/UPower/UPower.conf || true
+    systemctl restart upower || true
+fi
 
 # Turn off display backlight after 60s idle via GRUB
 if ! grep -q "consoleblank=60" /etc/default/grub; then
@@ -164,6 +170,12 @@ cat <<EOF > /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
 [connection]
 wifi.powersave = 2
 EOF
+
+WIFI_IFACE=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2}' | head -n 1 || echo "")
+if [ -z "$WIFI_IFACE" ]; then
+    WIFI_IFACE=$(ip link 2>/dev/null | awk -F': ' '/wl/{print $2}' | head -n 1 || echo "wlan0")
+fi
+echo "Detected Wi-Fi Interface: ${WIFI_IFACE}"
 
 cat <<EOF > /etc/systemd/system/wifi-powersave-off.service
 [Unit]
@@ -181,7 +193,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now wifi-powersave-off.service || true
 
-# Setup Battery Protection & UPS Watchdog (Shuts down cleanly if power outage drains battery < 7%)
+# Setup Battery Protection Threshold (70% Anti-Bloat limit)
 cat <<EOF > /etc/systemd/system/battery-threshold.service
 [Unit]
 Description=Set Battery Charge Threshold (Anti-Bloat Protection)
@@ -198,7 +210,7 @@ EOF
 systemctl enable --now battery-threshold.service || true
 systemctl enable --now tlp || true
 
-# Battery UPS Auto-Shutdown Watchdog Daemon
+# Battery UPS Graceful Auto-Shutdown Watchdog Daemon (Protects 1TB Drive & Databases)
 cat << 'EOF' > /usr/local/bin/aegis-ups-watchdog.sh
 #!/usr/bin/env bash
 for bat in /sys/class/power_supply/BAT*; do
@@ -720,6 +732,7 @@ echo "============================================================"
 echo "    [✔] AEGIS HOMELAB COMPLETE (ALL-IN-ONE PROVISIONED)"
 echo "    • Storage Strategy:     Choice [${STORAGE_CHOICE}]"
 echo "    • Aegis Dashboard:      http://${HOST_IP}:3001"
+echo "    • Hardware Health:      http://${HOST_IP}:3001 (Tab 2: Battery/SSD)"
 echo "    • Samba Windows Share:  \\\\${HOST_IP}\\Storage (Guest Access)"
 echo "    • Pi-hole Admin Web:    http://${HOST_IP}/admin/ (Pass: Programming123)"
 echo "    • Primary DNS Server:   ${HOST_IP}:53 (Pi-hole + Cloudflared DoH)"
