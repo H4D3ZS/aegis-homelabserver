@@ -247,6 +247,9 @@ if ! command -v pihole &> /dev/null; then
     curl -sSL https://install.pi-hole.net | bash --unattended || true
 fi
 
+# Set default Pi-hole web admin password: Programming123
+pihole -a -p "Programming123" || true
+
 # --- 9. CROWDSEC IPS & NFTABLES BOUNCER ---
 echo "[9/14] Installing CrowdSec security engine and firewall bouncer..."
 if ! command -v crowdsec &> /dev/null; then
@@ -260,6 +263,7 @@ fi
 if command -v ufw &> /dev/null; then
     ufw allow 53/tcp || true
     ufw allow 53/udp || true
+    ufw allow 80/tcp || true
     ufw allow 25565/tcp || true
     ufw allow 25565/udp || true
     ufw allow 3000/tcp || true
@@ -595,6 +599,7 @@ TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Run 'sudo tailscale up' to c
 echo "============================================================"
 echo "    [✔] AEGIS HOMELAB COMPLETE (ALL-IN-ONE PROVISIONED)"
 echo "    • Aegis Dashboard:      http://${HOST_IP}:3001"
+echo "    • Pi-hole Admin Web:    http://${HOST_IP}/admin/ (Pass: Programming123)"
 echo "    • Primary DNS Server:   ${HOST_IP}:53 (Pi-hole + Cloudflared DoH)"
 echo "    • Jellyfin Streaming:   http://${HOST_IP}:8096 (SyncPlay + QSV)"
 echo "    • qBittorrent WebUI:    http://${HOST_IP}:9091 (admin / Programming123)"

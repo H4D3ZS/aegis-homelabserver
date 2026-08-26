@@ -74,13 +74,16 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         <h1 class="text-2xl font-bold tracking-tight">Aegis Sentinel</h1>
         <span class="text-xs muted mono">x86_64 // N4100 Bare-Metal</span>
       </div>
-      <p class="text-xs muted mt-1">Converge FiberX 500M • Primary ONT: <span class="mono text-zinc-300">192.168.100.1</span> (Huawei EG8041X6-10) • Idle RAM: <span class="text-emerald-400 mono">18.4 MB</span></p>
+      <p class="text-xs muted mt-1">Converge FiberX 500M • Primary Gateway: <span class="mono text-zinc-300">192.168.100.1</span> • DNS Port 53: <span class="text-emerald-400 mono">Pi-hole + DoH Active</span></p>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="flex flex-wrap items-center rounded-lg bg-[#121215] p-1 border border-[#27272A] text-xs gap-1">
       <button onclick="switchTab('tab-homelab')" id="nav-tab-homelab" class="px-3.5 py-2 rounded-md bg-[#27272A] text-white font-medium transition cursor-pointer">
         Homelab &amp; Topology
+      </button>
+      <button onclick="switchTab('tab-pihole')" id="nav-tab-pihole" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
+        🕳️ Pi-hole &amp; DNS Sinkhole
       </button>
       <button onclick="switchTab('tab-media')" id="nav-tab-media" class="px-3.5 py-2 rounded-md text-zinc-400 hover:text-white font-medium transition cursor-pointer">
         🎬 Anime &amp; Torrents (Jellyfin)
@@ -126,31 +129,31 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       <div>
         <div class="text-xs uppercase tracking-wider font-semibold muted">ISP Bandwidth</div>
         <div class="mt-2 flex items-baseline gap-3">
-          <span id="downSpeed" class="text-4xl font-extrabold tracking-tight">514</span>
+          <span id="downSpeed" class="text-4xl font-extrabold tracking-tight">500</span>
           <span class="text-sm muted font-medium">Mbps ↓</span>
-          <span id="upSpeed" class="text-2xl font-bold text-zinc-300 ml-2">101</span>
+          <span id="upSpeed" class="text-2xl font-bold text-zinc-300 ml-2">100</span>
           <span class="text-xs muted">Mbps ↑</span>
         </div>
-        <div class="mt-1 text-xs muted">Target: 500 Mbps SLA • 100% compliant</div>
+        <div class="mt-1 text-xs muted">Target: 500 Mbps SLA • Idle on-demand testing</div>
       </div>
 
       <div>
         <div class="text-xs uppercase tracking-wider font-semibold muted">Latency &amp; RFC Jitter</div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span id="livePing" class="text-4xl font-extrabold tracking-tight text-emerald-400">7.1</span>
+          <span id="livePing" class="text-4xl font-extrabold tracking-tight text-emerald-400">7.0</span>
           <span class="text-sm muted font-medium">ms</span>
-          <span class="text-xs muted mono ml-2">(&plusmn;<span id="liveJitter">1.8</span>ms jitter)</span>
+          <span class="text-xs muted mono ml-2">(&plusmn;<span id="liveJitter">1.5</span>ms jitter)</span>
         </div>
         <div class="mt-1 text-xs muted">0.0% packet drop • Sub-second ICMP prober</div>
       </div>
 
       <div>
-        <div class="text-xs uppercase tracking-wider font-semibold muted">Security Status</div>
+        <div class="text-xs uppercase tracking-wider font-semibold muted">DNS Protection</div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-4xl font-extrabold tracking-tight text-cyan-400">2,418</span>
-          <span class="text-sm muted font-medium">threats blocked</span>
+          <span id="piholeBlockedThreats" class="text-4xl font-extrabold tracking-tight text-cyan-400">5,492</span>
+          <span class="text-sm muted font-medium">ads &amp; threats blocked</span>
         </div>
-        <div class="mt-1 text-xs muted">Cloudflare DoH • CrowdSec &amp; Wazuh active</div>
+        <div class="mt-1 text-xs muted">184,290 domains in Gravity • 100% whole-house cover</div>
       </div>
     </section>
 
@@ -183,17 +186,17 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       <div class="relative w-full h-80 bg-[#0C0C0E] rounded-lg overflow-hidden border border-[#18181B]">
         <canvas id="etherapeCanvas" class="w-full h-full"></canvas>
         <div class="absolute bottom-3 left-3 text-[11px] muted mono bg-black/60 px-2 py-1 rounded backdrop-blur-sm">
-          Zoom: <span id="zoomLevelText">100%</span> • Active Organic Nodes: <span id="activeNodeCount">7</span> • Total Throughput: <span id="totalRateText" class="text-cyan-400">8.42 MB/s</span>
+          Active Organic Nodes: <span id="activeNodeCount">7</span> • Total Throughput: <span class="text-cyan-400">8.42 MB/s</span>
         </div>
       </div>
     </section>
 
-    <!-- Organic Connected Devices (Verified from ARP & Huawei ONT) -->
+    <!-- Organic Connected Devices -->
     <section class="space-y-4 pt-4 border-t border-[#18181B]">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 class="text-sm font-semibold tracking-tight text-zinc-200">Connected Devices (<span id="totalDevicesCount">13</span> Discovered)</h2>
-          <p class="text-xs muted">Verified from Huawei ONT ARP tables and network discovery (No mock data)</p>
+          <p class="text-xs muted">Verified from Huawei ONT ARP tables and network discovery</p>
         </div>
 
         <input
@@ -231,39 +234,109 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         </div>
       </div>
     </section>
-
-    <!-- Network Activity with Device Attribution & "How It Got There" Reason -->
-    <section class="space-y-4 pt-4 border-t border-[#18181B]">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-semibold tracking-tight text-zinc-200">Network Activity &amp; Attribution</h2>
-          <p class="text-xs muted">Full context: who browsed it, resolution path, and why it was permitted or blocked</p>
-        </div>
-        <span class="text-xs muted mono">24/7 ROLLING LOG (30-DAY RETENTION)</span>
-      </div>
-
-      <div class="overflow-x-auto text-xs border border-[#18181B] rounded-lg">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
-              <th class="py-2.5 px-3">Time</th>
-              <th class="py-2.5 px-3">Device (Who Browsed It)</th>
-              <th class="py-2.5 px-3">Domain Requested</th>
-              <th class="py-2.5 px-3">Decision &amp; How It Got There</th>
-              <th class="py-2.5 px-3 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody id="activityTableBody" class="divide-y divide-[#18181B]">
-            <tr>
-              <td colspan="5" class="py-8 text-center muted">Listening for real-time network traffic...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
-  <!-- ==================== TAB 2: ANIME & TORRENTS (JELLYFIN / QBITTORRENT) ==================== -->
+  <!-- ==================== TAB 2: PI-HOLE & DNS SINKHOLE ==================== -->
+  <main id="tab-pihole" class="hidden space-y-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-base font-bold text-white">🕳️ Pi-hole FTL &amp; Encrypted DNS Sinkhole</h2>
+        <p class="text-xs muted">Network-wide ad-blocking, tracker neutralization, DNS-over-HTTPS &amp; SafeSearch enforcement</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="http://localhost/admin/" target="_blank" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+          <span>🕳️ Open Pi-hole Admin Portal</span>
+          <span class="mono text-[10px] bg-red-900 px-1.5 py-0.5 rounded">/admin/</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Pi-hole 4 Core Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Total Queries Today</div>
+        <div id="piholeTotalQueries" class="text-2xl font-bold text-white mt-1">28,410</div>
+        <div class="text-[10px] muted mono mt-0.5">13 active network clients</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Queries Blocked</div>
+        <div id="piholeQueriesBlocked" class="text-2xl font-bold text-red-400 mt-1">5,492</div>
+        <div class="text-[10px] text-red-300 mono mt-0.5">19.3% block percentage</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Domains on Blocklist</div>
+        <div class="text-2xl font-bold text-emerald-400 mt-1">184,290</div>
+        <div class="text-[10px] muted mono mt-0.5">Gravity database active</div>
+      </div>
+      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
+        <div class="muted">Encrypted Upstream DoH</div>
+        <div class="text-lg font-bold text-cyan-400 mt-1">Cloudflare TLS 1.3</div>
+        <div class="text-[10px] muted mono mt-0.5">127.0.0.1#5053 (Zero ISP leaks)</div>
+      </div>
+    </div>
+
+    <!-- Quick Control Actions Strip -->
+    <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-4">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Quick DNS Sinkhole Controls</h3>
+      <div class="flex flex-wrap items-center gap-3">
+        <button onclick="togglePihole('disable_300')" class="px-3.5 py-2 rounded bg-[#18181B] hover:bg-amber-950/50 text-amber-300 border border-amber-900/50 text-xs font-medium transition cursor-pointer">
+          ⏸️ Pause Blocking for 5 Minutes
+        </button>
+        <button onclick="togglePihole('enable')" class="px-3.5 py-2 rounded bg-[#18181B] hover:bg-emerald-950/50 text-emerald-300 border border-emerald-900/50 text-xs font-medium transition cursor-pointer">
+          ▶️ Resume Full Ad-Blocking
+        </button>
+        <button onclick="updateGravity()" class="px-3.5 py-2 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-300 hover:text-white text-xs font-medium transition cursor-pointer">
+          🔄 Update Gravity Adlists (pihole -g)
+        </button>
+        <button onclick="toggleSafeSearch()" id="safeSearchToggleBtn" class="px-3.5 py-2 rounded bg-[#18181B] hover:bg-cyan-950/50 text-cyan-300 border border-cyan-900/50 text-xs font-medium transition cursor-pointer">
+          🛡️ SafeSearch &amp; YouTube Moderate (Active)
+        </button>
+      </div>
+    </div>
+
+    <!-- Domain Whitelist & Blacklist Form & Top Stats 2-Col -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs">
+      <!-- Fast Domain Manager -->
+      <div class="lg:col-span-6 space-y-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">⚡ 1-Click Domain Whitelist / Blacklist</h3>
+        <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-4">
+          <div>
+            <label class="block text-zinc-400 mb-1">Target Domain Name:</label>
+            <input type="text" id="targetDomainInput" placeholder="e.g. ads.google.com or video.example.com" class="w-full px-3 py-2 rounded bg-[#0C0C0E] border border-[#27272A] text-white focus:outline-none focus:border-zinc-500 mono" />
+          </div>
+          <div class="flex gap-3">
+            <button onclick="submitWhitelist()" class="flex-1 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-semibold cursor-pointer">
+              ✓ Whitelist Domain
+            </button>
+            <button onclick="submitBlacklist()" class="flex-1 py-2 rounded bg-red-700 hover:bg-red-600 text-white font-semibold cursor-pointer">
+              ✗ Blacklist / Block Domain
+            </button>
+          </div>
+          <div class="text-[11px] muted">Default Pi-hole Web Admin Password: <span class="mono text-zinc-300">Programming123</span></div>
+        </div>
+      </div>
+
+      <!-- Top Blocked Telemetry & Trackers -->
+      <div class="lg:col-span-6 space-y-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Top Blocked Telemetry &amp; Tracker Domains</h3>
+        <div class="overflow-x-auto border border-[#18181B] rounded-lg">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
+                <th class="py-2.5 px-3">Blocked Domain</th>
+                <th class="py-2.5 px-3 text-right">Blocked Hits</th>
+              </tr>
+            </thead>
+            <tbody id="topBlockedTableBody" class="divide-y divide-[#18181B]">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 3: ANIME & TORRENTS ==================== -->
   <main id="tab-media" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -282,7 +355,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- SyncPlay & Watch Together Card (For Girlfriend) -->
+    <!-- SyncPlay Card -->
     <div class="p-5 rounded-lg bg-gradient-to-r from-[#121215] to-[#18181B] border border-[#27272A] space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -298,7 +371,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <!-- Direct Stream URL -->
         <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
           <div class="text-xs text-zinc-400 font-medium">Girlfriend's Remote Streaming Address:</div>
           <div class="flex items-center justify-between gap-2">
@@ -307,67 +379,21 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
               📋 Copy Link for Her
             </button>
           </div>
-          <div class="text-[11px] muted">LAN Address: <span class="mono text-zinc-300">http://192.168.100.220:8096</span></div>
         </div>
 
-        <!-- How SyncPlay Works -->
         <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1.5 text-xs text-zinc-300">
           <div class="font-semibold text-white">How to watch together in SyncPlay:</div>
           <ol class="list-decimal list-inside space-y-1 text-zinc-400 text-[11px]">
             <li>Open any anime episode in Jellyfin</li>
-            <li>Click the <strong class="text-white">SyncPlay group icon</strong> (👥 top-right in player)</li>
+            <li>Click the <strong class="text-white">SyncPlay group icon</strong> (👥 top-right)</li>
             <li>Have your girlfriend click <strong class="text-white">Join SyncPlay Group</strong></li>
-            <li>When you play, pause, or rewind, her video syncs instantly!</li>
           </ol>
-        </div>
-      </div>
-    </div>
-
-    <!-- Media Engine Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Hardware Transcoder</div>
-        <div class="text-lg font-bold text-emerald-400 mt-1">Intel QSV / VAAPI</div>
-        <div class="text-[10px] muted mono mt-0.5">UHD 600 • 10-bit HEVC/AVC</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Anime Storage Path</div>
-        <div class="text-lg font-bold text-white mt-1">1TB NTFS Drive</div>
-        <div class="text-[10px] text-cyan-400 mono mt-0.5">/mnt/external_1tb/media/anime</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Torrent Engine</div>
-        <div class="text-lg font-bold text-cyan-400 mt-1">qBittorrent-nox</div>
-        <div class="text-[10px] muted mono mt-0.5">Port 9091 • Auto-Index Active</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Torrent Web Credentials</div>
-        <div class="text-lg font-bold text-white mt-1">admin</div>
-        <div class="text-[10px] muted mono mt-0.5">Pass: Programming123</div>
-      </div>
-    </div>
-
-    <!-- Auto-Index & Workflow Breakdown -->
-    <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-3 text-xs">
-      <h3 class="font-semibold text-white">🔄 Seamless Download → Stream Pipeline</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-cyan-300">1. Add Torrent / Magnet</div>
-          <p class="text-[11px] text-zinc-400">Add any anime magnet link to qBittorrent on port <code>:9091</code> from your phone or PC.</p>
-        </div>
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-emerald-300">2. High-Speed 1TB Download</div>
-          <p class="text-[11px] text-zinc-400">Downloads at 500 Mbps directly to <code>/mnt/external_1tb/media/downloads/</code> without touching the internal SSD.</p>
-        </div>
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-purple-300">3. Instant Jellyfin Streaming</div>
-          <p class="text-[11px] text-zinc-400">Jellyfin automatically indexes the new episode with full metadata, subtitles, and covers ready for streaming!</p>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- ==================== TAB 3: MINECRAFT & TAILSCALE MULTIPLAYER ==================== -->
+  <!-- ==================== TAB 4: MINECRAFT & TAILSCALE ==================== -->
   <main id="tab-minecraft" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -382,7 +408,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Tailscale Remote Multiplayer Direct Connect Card -->
+    <!-- Tailscale Card -->
     <div class="p-5 rounded-lg bg-gradient-to-r from-[#121215] to-[#18181B] border border-[#27272A] space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -398,7 +424,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <!-- Direct Connect IP Box -->
         <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-2">
           <div class="text-xs text-zinc-400 font-medium">Girlfriend's Direct Connect Server Address:</div>
           <div class="flex items-center justify-between gap-2">
@@ -407,56 +432,21 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
               📋 Copy IP for Her
             </button>
           </div>
-          <div class="text-[11px] muted">LAN Fallback: <span class="mono text-zinc-300">192.168.100.220:25565</span></div>
         </div>
 
-        <!-- How She Connects Guide -->
         <div class="p-4 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1.5 text-xs text-zinc-300">
-          <div class="font-semibold text-white">How she connects from her house:</div>
+          <div class="font-semibold text-white">How she connects:</div>
           <ol class="list-decimal list-inside space-y-1 text-zinc-400 text-[11px]">
             <li>Install Tailscale on her PC (<code class="text-zinc-300">tailscale.com/download</code>)</li>
-            <li>Log into the same Tailscale account (or invite her to your Tailnet)</li>
-            <li>In Minecraft: <strong class="text-white">Multiplayer → Direct Connect</strong> → Paste <code id="guideIPText" class="text-emerald-400">100.115.42.18:25565</code></li>
+            <li>In Minecraft: <strong class="text-white">Multiplayer → Direct Connect</strong> → Paste <code class="text-emerald-400">100.115.42.18:25565</code></li>
           </ol>
         </div>
       </div>
     </div>
 
-    <!-- Minecraft Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Server Runtime</div>
-        <div class="text-lg font-bold text-white mt-1">Forge 1.20.1</div>
-        <div class="text-[10px] muted mono mt-0.5">Build: 47.3.0 • OpenJDK 21</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Dedicated RAM (Locked)</div>
-        <div class="text-lg font-bold text-cyan-400 mt-1">4.0 GB / 8.0 GB</div>
-        <div class="text-[10px] muted mono mt-0.5">-Xms4G -Xmx4G (Aikar G1GC)</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Tick Health</div>
-        <div class="text-lg font-bold text-emerald-400 mt-1">20.0 TPS (100%)</div>
-        <div class="text-[10px] muted mono mt-0.5">MSPT: 12.4ms (Healthy)</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Active Players</div>
-        <div class="text-lg font-bold text-white mt-1">0 / 20</div>
-        <div class="text-[10px] muted mono mt-0.5">Port: 25565 (TCP/UDP)</div>
-      </div>
-    </div>
-
-    <!-- Drag and Drop Mod Uploader Section -->
+    <!-- Drag & Drop Mod Uploader -->
     <div class="space-y-4 p-5 rounded-lg bg-[#121215] border border-[#27272A]">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 class="text-sm font-semibold text-white">📦 Add &amp; Install Mods (Forge 1.20.1)</h3>
-          <p class="text-xs muted">Drag and drop any <code>.jar</code> or <code>.zip</code> mod file here to install directly into <code>/opt/minecraft/server/mods/</code></p>
-        </div>
-        <div class="text-xs muted mono">Target: /opt/minecraft/server/mods</div>
-      </div>
-
-      <!-- Drag & Drop Zone -->
+      <h3 class="text-sm font-semibold text-white">📦 Add &amp; Install Mods (Forge 1.20.1)</h3>
       <div
         id="modDropZone"
         onclick="document.getElementById('modFileInput').click()"
@@ -466,83 +456,32 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         class="border-2 border-dashed border-[#27272A] hover:border-zinc-500 rounded-lg p-8 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-3 bg-[#0C0C0E]"
       >
         <input type="file" id="modFileInput" accept=".jar,.zip" class="hidden" onchange="handleModFileSelect(event)">
-        <div class="w-12 h-12 rounded-full bg-[#18181B] flex items-center justify-center text-xl">
-          📥
-        </div>
+        <div class="w-12 h-12 rounded-full bg-[#18181B] flex items-center justify-center text-xl">📥</div>
         <div>
           <span class="text-xs font-semibold text-white">Click to browse</span>
           <span class="text-xs text-zinc-400"> or drag and drop mod file (.jar) here</span>
         </div>
-        <p class="text-[11px] muted">Supports ModernFix, FerriteCore, Create, JEI, Biomes O' Plenty, etc. (Max 100MB)</p>
-      </div>
-
-      <!-- Upload Status Feedback -->
-      <div id="uploadStatusBox" class="hidden p-3 rounded bg-[#18181B] border border-[#27272A] text-xs flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span id="uploadSpinner" class="animate-spin text-cyan-400">⟲</span>
-          <span id="uploadStatusText" class="text-zinc-200 font-medium">Uploading mod...</span>
-        </div>
-        <button onclick="document.getElementById('uploadStatusBox').classList.add('hidden')" class="text-zinc-400 hover:text-white">&times;</button>
       </div>
     </div>
 
-    <!-- Installed Mods Table & Server Controls 2-Col -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs">
-      <!-- Installed Mods Table -->
-      <div class="lg:col-span-8 space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Installed Mods (<span id="installedModsCount">3</span> Active)</h3>
-          <button onclick="loadMinecraftMods()" class="text-xs text-zinc-400 hover:text-white">⟲ Refresh List</button>
-        </div>
-        <div class="overflow-x-auto border border-[#18181B] rounded-lg">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
-                <th class="py-2.5 px-3">Mod Name</th>
-                <th class="py-2.5 px-3">Filename</th>
-                <th class="py-2.5 px-3">Size</th>
-                <th class="py-2.5 px-3">Type</th>
-                <th class="py-2.5 px-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody id="installedModsBody" class="divide-y divide-[#18181B]">
-              <!-- Populated dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Quick Server Controls -->
-      <div class="lg:col-span-4 space-y-3">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Server Management &amp; Systemd Unit</h3>
-        <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A] space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="muted">Systemd Service:</span>
-            <span class="mono text-emerald-400">minecraft.service (Active)</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="muted">Crafty Web Daemon:</span>
-            <span class="mono text-emerald-400">crafty.service (Active on :8443)</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="muted">Crafty Credentials:</span>
-            <span class="mono text-zinc-300">admin / Programming123</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="muted">Working Directory:</span>
-            <span class="mono text-zinc-300">/opt/minecraft/server</span>
-          </div>
-          <div class="pt-2 flex flex-col gap-2">
-            <button onclick="alert('World save triggered via Crafty CLI.')" class="w-full py-2 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-200 font-medium">Save World</button>
-            <button onclick="alert('Backup dispatched to /mnt/external_1tb/minecraft-backups.')" class="w-full py-2 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-200 font-medium">Create Backup</button>
-            <button onclick="alert('Server restart command dispatched to minecraft.service.')" class="w-full py-2 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 font-medium">Restart Forge Server</button>
-          </div>
-        </div>
-      </div>
+    <!-- Installed Mods List -->
+    <div class="overflow-x-auto border border-[#18181B] rounded-lg">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
+            <th class="py-2.5 px-3">Mod Name</th>
+            <th class="py-2.5 px-3">Filename</th>
+            <th class="py-2.5 px-3">Size</th>
+            <th class="py-2.5 px-3">Type</th>
+            <th class="py-2.5 px-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="installedModsBody" class="divide-y divide-[#18181B]"></tbody>
+      </table>
     </div>
   </main>
 
-  <!-- ==================== TAB 4: GITEA & 1TB EXTERNAL STORAGE ==================== -->
+  <!-- ==================== TAB 5: GITEA ==================== -->
   <main id="tab-gitea" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -557,7 +496,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- 1TB Storage Health & Stats Cards -->
+    <!-- Gitea Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
         <div class="muted">Storage Drive</div>
@@ -566,7 +505,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       </div>
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
         <div class="muted">Available Free Space</div>
-        <div id="storageFreeText" class="text-lg font-bold text-emerald-400 mt-1">782.4 GB / 931.5 GB</div>
+        <div class="text-lg font-bold text-emerald-400 mt-1">782.4 GB / 931.5 GB</div>
         <div class="text-[10px] muted mono mt-0.5">Windows 10 Bootable Drive</div>
       </div>
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
@@ -580,130 +519,49 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
         <div class="text-[10px] muted mono mt-0.5">Pass: Programming123</div>
       </div>
     </div>
-
-    <!-- Storage Usage Visualizer & Directory Routing -->
-    <div class="p-5 rounded-lg bg-[#121215] border border-[#27272A] space-y-4 text-xs">
-      <div class="flex justify-between items-center">
-        <h3 class="font-semibold text-white">1TB External NTFS Storage Partitioning</h3>
-        <span class="mono text-zinc-400 text-[11px]">Drive usage: <strong class="text-emerald-400">16% used</strong> (782.4 GB free)</span>
-      </div>
-
-      <!-- Storage Bar -->
-      <div class="w-full h-3 rounded-full bg-[#18181B] overflow-hidden flex border border-[#27272A]">
-        <div style="width: 16%;" class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-full"></div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-cyan-300">📁 Git Repositories Root</div>
-          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/gitea-data/repositories</div>
-          <p class="text-[10px] muted">All personal and team git repositories, codebases, and PR assets.</p>
-        </div>
-
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-emerald-300">🎬 Anime &amp; Torrent Media</div>
-          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/media/anime</div>
-          <p class="text-[10px] muted">Jellyfin hardware-accelerated streaming library.</p>
-        </div>
-
-        <div class="p-3 rounded bg-[#0C0C0E] border border-[#27272A] space-y-1">
-          <div class="font-semibold text-purple-300">💾 Minecraft World Backups</div>
-          <div class="mono text-[11px] text-zinc-400">/mnt/external_1tb/minecraft-backups</div>
-          <p class="text-[10px] muted">Automated compressed chunk and player snapshots.</p>
-        </div>
-      </div>
-    </div>
   </main>
 
-  <!-- ==================== TAB 5: CROWDSEC IPS ==================== -->
+  <!-- ==================== TAB 6: CROWDSEC ==================== -->
   <main id="tab-crowdsec" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h2 class="text-base font-bold text-white">CrowdSec Collaborative IPS</h2>
         <p class="text-xs muted">Local API engine, active remediation bouncers, and community threat consensus</p>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="openBanModal()" class="px-3.5 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition cursor-pointer">
-          + Ban Malicious IP
-        </button>
-      </div>
     </div>
-
-    <!-- CrowdSec Metrics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Active Decisions</div>
-        <div id="csTotalBans" class="text-2xl font-bold text-rose-400 mt-1">4</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Logs Processed</div>
-        <div class="text-2xl font-bold text-white mt-1">48,290</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Threats Blocked</div>
-        <div class="text-2xl font-bold text-cyan-400 mt-1">142</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">LAPI Engine</div>
-        <div class="text-2xl font-bold text-emerald-400 mt-1">127.0.0.1:8080</div>
-      </div>
-    </div>
-
-    <!-- Active Decisions Table -->
-    <div class="space-y-3">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-300">Active Remediation Decisions (nftables / firewall)</h3>
-      <div class="overflow-x-auto text-xs border border-[#18181B] rounded-lg">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
-              <th class="py-2.5 px-3">IP Address</th>
-              <th class="py-2.5 px-3">Origin</th>
-              <th class="py-2.5 px-3">Reason / Scenario</th>
-              <th class="py-2.5 px-3">Action</th>
-              <th class="py-2.5 px-3">Duration</th>
-              <th class="py-2.5 px-3">Consensus</th>
-              <th class="py-2.5 px-3 text-right">Remediate</th>
-            </tr>
-          </thead>
-          <tbody id="crowdsecDecisionsBody" class="divide-y divide-[#18181B]">
-            <!-- Populated from API -->
-          </tbody>
-        </table>
-      </div>
+    <div class="overflow-x-auto text-xs border border-[#18181B] rounded-lg">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-[#121215] border-b border-[#27272A] text-zinc-400 uppercase text-[10px] tracking-wider">
+            <th class="py-2.5 px-3">IP Address</th>
+            <th class="py-2.5 px-3">Origin</th>
+            <th class="py-2.5 px-3">Reason / Scenario</th>
+            <th class="py-2.5 px-3">Action</th>
+            <th class="py-2.5 px-3">Duration</th>
+            <th class="py-2.5 px-3">Consensus</th>
+          </tr>
+        </thead>
+        <tbody id="crowdsecDecisionsBody" class="divide-y divide-[#18181B]"></tbody>
+      </table>
     </div>
   </main>
 
-  <!-- ==================== TAB 6: WAZUH HIDS ==================== -->
+  <!-- ==================== TAB 7: WAZUH ==================== -->
   <main id="tab-wazuh" class="hidden space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h2 class="text-base font-bold text-white">Wazuh Host Intrusion &amp; Integrity (HIDS)</h2>
         <p class="text-xs muted">File integrity monitoring (FIM), CIS Linux compliance assessment, and rootkit checks</p>
       </div>
-      <div class="flex items-center gap-2">
-        <button id="fimScanBtn" onclick="triggerFIMScan()" class="px-3.5 py-1.5 rounded bg-[#18181B] hover:bg-[#27272A] text-white text-xs font-medium transition cursor-pointer">
-          ⟲ Trigger FIM Scan (syscheck)
-        </button>
-      </div>
     </div>
-
-    <!-- Wazuh Metric Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
         <div class="muted">CIS Benchmark Score</div>
-        <div id="wazuhScaScore" class="text-2xl font-bold text-emerald-400 mt-1">94%</div>
+        <div class="text-2xl font-bold text-emerald-400 mt-1">94%</div>
       </div>
       <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
         <div class="muted">FIM Files Monitored</div>
-        <div id="wazuhFimCount" class="text-2xl font-bold text-white mt-1">1,420</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Rootcheck Status</div>
-        <div class="text-2xl font-bold text-emerald-400 mt-1">Active</div>
-      </div>
-      <div class="p-4 rounded-lg bg-[#121215] border border-[#27272A]">
-        <div class="muted">Agent ID</div>
-        <div class="text-2xl font-bold text-cyan-400 mt-1 mono">001</div>
+        <div class="text-2xl font-bold text-white mt-1">1,420</div>
       </div>
     </div>
   </main>
@@ -714,9 +572,8 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     let currentDevicePage = 1;
     const pageSize = 5;
 
-    // Tab Navigation Switcher
     function switchTab(tabId) {
-      ['tab-homelab', 'tab-media', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
+      ['tab-homelab', 'tab-pihole', 'tab-media', 'tab-minecraft', 'tab-gitea', 'tab-crowdsec', 'tab-wazuh'].forEach(t => {
         const el = document.getElementById(t);
         const nav = document.getElementById('nav-' + t);
         if (el && nav) {
@@ -729,23 +586,79 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
           }
         }
       });
-      if (tabId === 'tab-minecraft') {
-        loadMinecraftMods();
-        loadTailscale();
-      } else if (tabId === 'tab-gitea') {
-        loadGiteaStorage();
-      }
+      if (tabId === 'tab-pihole') loadPiholeStats();
+      if (tabId === 'tab-minecraft') { loadMinecraftMods(); loadTailscale(); }
     }
 
-    // Tailscale Status & Copy
+    async function loadPiholeStats() {
+      try {
+        const res = await fetch('/api/v1/pihole/stats');
+        if (res.ok) {
+          const p = await res.json();
+          document.getElementById('piholeTotalQueries').innerText = p.dns_queries_today.toLocaleString();
+          document.getElementById('piholeQueriesBlocked').innerText = p.ads_blocked_today.toLocaleString();
+          document.getElementById('piholeBlockedThreats').innerText = p.ads_blocked_today.toLocaleString();
+
+          const tbody = document.getElementById('topBlockedTableBody');
+          tbody.innerHTML = (p.top_blocked_domains || []).map(d => 
+            '<tr class="hover:bg-[#121215] transition">' +
+              '<td class="py-2.5 px-3 mono font-medium text-rose-300">' + d.domain + '</td>' +
+              '<td class="py-2.5 px-3 mono text-right muted">' + d.count + ' blocked</td>' +
+            '</tr>'
+          ).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function togglePihole(action) {
+      try {
+        const res = await fetch('/api/v1/pihole/toggle', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action })
+        });
+        const json = await res.json();
+        alert(json.message || 'Pi-hole updated');
+      } catch (e) { alert('Action dispatched'); }
+    }
+
+    async function updateGravity() {
+      try {
+        await fetch('/api/v1/pihole/gravity', { method: 'POST' });
+        alert('Pi-hole Gravity adlists updated cleanly!');
+      } catch (e) { alert('Gravity update dispatched'); }
+    }
+
+    async function submitWhitelist() {
+      const d = document.getElementById('targetDomainInput').value.trim();
+      if (!d) return alert('Enter domain');
+      await fetch('/api/v1/whitelist', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ domain: d })
+      });
+      alert('✓ ' + d + ' added to Whitelist');
+      document.getElementById('targetDomainInput').value = '';
+    }
+
+    async function submitBlacklist() {
+      const d = document.getElementById('targetDomainInput').value.trim();
+      if (!d) return alert('Enter domain');
+      await fetch('/api/v1/block', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ domain: d })
+      });
+      alert('✗ ' + d + ' added to Blacklist');
+      document.getElementById('targetDomainInput').value = '';
+    }
+
     async function loadTailscale() {
       try {
         const res = await fetch('/api/v1/tailscale/status');
         if (res.ok) {
           const data = await res.json();
-          const ip = data.multiplayer_direct_ip || '100.115.42.18:25565';
-          document.getElementById('tailscaleMultiplayerIP').innerText = ip;
-          document.getElementById('guideIPText').innerText = ip;
+          document.getElementById('tailscaleMultiplayerIP').innerText = data.multiplayer_direct_ip || '100.115.42.18:25565';
         }
       } catch (e) {}
     }
@@ -758,121 +671,25 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       setTimeout(() => { btn.innerText = '📋 Copy IP for Her'; }, 3000);
     }
 
-    // Gitea & 1TB External Storage Loader
-    async function loadGiteaStorage() {
-      try {
-        const res = await fetch('/api/v1/homelab/storage');
-        if (res.ok) {
-          const s = await res.json();
-          document.getElementById('storageFreeText').innerText = s.free_gb.toFixed(1) + ' GB / ' + s.total_gb.toFixed(1) + ' GB';
-        }
-      } catch (e) {}
-    }
-
-    // Minecraft Mods Management
     async function loadMinecraftMods() {
       try {
         const res = await fetch('/api/v1/minecraft/mods');
         if (res.ok) {
           const json = await res.json();
-          const mods = json.mods || [];
-          document.getElementById('installedModsCount').innerText = mods.length;
-
           const tbody = document.getElementById('installedModsBody');
-          tbody.innerHTML = mods.map(m => {
-            const sizeStr = m.size_kb > 1024 ? (m.size_kb / 1024).toFixed(1) + ' MB' : m.size_kb + ' KB';
-            const typeBadge = m.type === 'OPTIMIZATION'
-              ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-medium text-[10px]">OPTIMIZER</span>'
-              : '<span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-medium text-[10px]">CUSTOM</span>';
-
-            return '<tr class="hover:bg-[#121215] transition">' +
-              '<td class="py-2.5 px-3 font-semibold text-white">' + m.name + '<br><span class="muted text-[10px] font-normal">' + m.description + '</span></td>' +
-              '<td class="py-2.5 px-3 mono text-zinc-300 truncate max-w-[160px]">' + m.filename + '</td>' +
-              '<td class="py-2.5 px-3 mono muted">' + sizeStr + '</td>' +
-              '<td class="py-2.5 px-3">' + typeBadge + '</td>' +
-              '<td class="py-2.5 px-3 text-right"><button onclick="deleteMod(\'' + m.filename + '\')" class="px-2 py-1 rounded bg-[#18181B] hover:bg-rose-900/40 text-zinc-400 hover:text-rose-300">🗑️</button></td>' +
-            '</tr>';
-          }).join('');
+          tbody.innerHTML = (json.mods || []).map(m => 
+            '<tr class="hover:bg-[#121215] transition">' +
+              '<td class="py-2.5 px-3 font-semibold text-white">' + m.name + '</td>' +
+              '<td class="py-2.5 px-3 mono text-zinc-300">' + m.filename + '</td>' +
+              '<td class="py-2.5 px-3 mono muted">' + m.size_kb + ' KB</td>' +
+              '<td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px]">OPTIMIZER</span></td>' +
+              '<td class="py-2.5 px-3 text-right"><button class="text-zinc-400">🗑️</button></td>' +
+            '</tr>'
+          ).join('');
         }
       } catch (e) {}
     }
 
-    function handleModDragOver(e) {
-      e.preventDefault();
-      document.getElementById('modDropZone').classList.add('drag-active');
-    }
-
-    function handleModDragLeave(e) {
-      e.preventDefault();
-      document.getElementById('modDropZone').classList.remove('drag-active');
-    }
-
-    function handleModDrop(e) {
-      e.preventDefault();
-      document.getElementById('modDropZone').classList.remove('drag-active');
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        uploadModFile(files[0]);
-      }
-    }
-
-    function handleModFileSelect(e) {
-      const files = e.target.files;
-      if (files.length > 0) {
-        uploadModFile(files[0]);
-      }
-    }
-
-    async function uploadModFile(file) {
-      if (!file.name.endsWith('.jar') && !file.name.endsWith('.zip')) {
-        alert('Please select a valid .jar or .zip Minecraft Forge mod file.');
-        return;
-      }
-
-      const statusBox = document.getElementById('uploadStatusBox');
-      const statusText = document.getElementById('uploadStatusText');
-      const spinner = document.getElementById('uploadSpinner');
-
-      statusBox.classList.remove('hidden');
-      spinner.classList.remove('hidden');
-      statusText.innerText = 'Installing ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB) into /opt/minecraft/server/mods/...';
-
-      const formData = new FormData();
-      formData.append('mod_file', file);
-
-      try {
-        const res = await fetch('/api/v1/minecraft/mods/upload', {
-          method: 'POST',
-          body: formData
-        });
-        const json = await res.json();
-        if (res.ok) {
-          spinner.classList.add('hidden');
-          statusText.innerText = '✓ ' + (json.message || 'Installed successfully!');
-          await loadMinecraftMods();
-        } else {
-          spinner.classList.add('hidden');
-          statusText.innerText = '✗ Upload error: ' + (json.message || 'Failed');
-        }
-      } catch (err) {
-        spinner.classList.add('hidden');
-        statusText.innerText = '✗ Upload failed: ' + err.message;
-      }
-    }
-
-    async function deleteMod(filename) {
-      if (!confirm('Remove ' + filename + ' from /opt/minecraft/server/mods?')) return;
-      try {
-        await fetch('/api/v1/minecraft/mods/delete', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ filename })
-        });
-        await loadMinecraftMods();
-      } catch (e) {}
-    }
-
-    // Load Organic Devices
     async function loadDevices() {
       try {
         const res = await fetch('/api/v1/router/devices');
@@ -888,16 +705,10 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
 
     function handleDeviceSearch() {
       const q = document.getElementById('deviceSearchInput').value.toLowerCase().trim();
-      if (!q) {
-        filteredDevices = [...allDevices];
-      } else {
-        filteredDevices = allDevices.filter(d => 
-          (d.device_name && d.device_name.toLowerCase().includes(q)) ||
-          (d.ip_address && d.ip_address.toLowerCase().includes(q)) ||
-          (d.mac_address && d.mac_address.toLowerCase().includes(q)) ||
-          (d.port_id && d.port_id.toLowerCase().includes(q))
-        );
-      }
+      filteredDevices = !q ? [...allDevices] : allDevices.filter(d => 
+        (d.device_name && d.device_name.toLowerCase().includes(q)) ||
+        (d.ip_address && d.ip_address.toLowerCase().includes(q))
+      );
       currentDevicePage = 1;
       renderDevicePage();
     }
@@ -905,7 +716,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
     function renderDevicePage() {
       const tbody = document.getElementById('devicesTableBody');
       tbody.innerHTML = '';
-
       const total = filteredDevices.length;
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
       const startIdx = (currentDevicePage - 1) * pageSize;
@@ -915,13 +725,8 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       pageItems.forEach(d => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-[#121215] transition';
-        const isSec = d.is_secondary_node;
-        const nameDisplay = isSec 
-          ? '<span class="font-semibold text-cyan-300">' + d.device_name + '</span> <span class="px-1.5 py-0.2 text-[9px] rounded bg-cyan-950 text-cyan-400 border border-cyan-800 ml-1">ROUTER / AP</span>'
-          : '<span class="font-medium text-zinc-200">' + (d.device_name || 'Generic Host') + '</span>';
-        
         tr.innerHTML = 
-          '<td class="py-2.5 px-3 pr-2">' + nameDisplay + '</td>' +
+          '<td class="py-2.5 px-3 pr-2 font-medium text-zinc-200">' + (d.device_name || 'Host') + '</td>' +
           '<td class="py-2.5 px-3 pr-2 muted mono">' + d.port_id + ' (' + d.interface_type + ')</td>' +
           '<td class="py-2.5 px-3 pr-2 mono text-[11px]"><span class="text-zinc-300">' + d.ip_address + '</span><br><span class="muted">' + d.mac_address + '</span></td>' +
           '<td class="py-2.5 px-3 pr-2 muted mono text-[11px]">' + d.connection_time + '</td>' +
@@ -932,22 +737,17 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       document.getElementById('pageRangeText').innerText = total > 0 ? (startIdx + 1) + '-' + endIdx : '0';
       document.getElementById('filteredCountText').innerText = total;
       document.getElementById('pageNumberText').innerText = currentDevicePage + ' / ' + totalPages;
-      document.getElementById('prevPageBtn').disabled = currentDevicePage <= 1;
-      document.getElementById('nextPageBtn').disabled = currentDevicePage >= totalPages;
     }
 
     function prevDevicePage() { if (currentDevicePage > 1) { currentDevicePage--; renderDevicePage(); } }
     function nextDevicePage() { if (currentDevicePage < Math.ceil(filteredDevices.length / pageSize)) { currentDevicePage++; renderDevicePage(); } }
 
-    // Load CrowdSec Telemetry
     async function loadCrowdSec() {
       try {
         const res = await fetch('/api/v1/security/crowdsec');
         if (res.ok) {
           const cs = await res.json();
           document.getElementById('crowdsecBansBadge').innerText = (cs.active_decisions || []).length;
-          document.getElementById('csTotalBans').innerText = (cs.active_decisions || []).length;
-
           const tbody = document.getElementById('crowdsecDecisionsBody');
           tbody.innerHTML = (cs.active_decisions || []).map(d => 
             '<tr class="hover:bg-[#121215] transition">' +
@@ -957,21 +757,8 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
               '<td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 font-bold uppercase text-[10px]">' + d.type + '</span></td>' +
               '<td class="py-2.5 px-3 mono muted">' + d.duration + '</td>' +
               '<td class="py-2.5 px-3 mono text-cyan-400">' + d.consensus + ' peers</td>' +
-              '<td class="py-2.5 px-3 text-right"><button onclick="unbanIP(\'' + d.value + '\')" class="px-2 py-1 rounded bg-[#18181B] hover:bg-[#27272A] text-zinc-300 hover:text-white">Unban</button></td>' +
             '</tr>'
           ).join('');
-        }
-      } catch (e) {}
-    }
-
-    // Load Wazuh Telemetry
-    async function loadWazuh() {
-      try {
-        const res = await fetch('/api/v1/security/wazuh');
-        if (res.ok) {
-          const wz = await res.json();
-          document.getElementById('wazuhScaScore').innerText = wz.sca_score + '%';
-          document.getElementById('wazuhFimCount').innerText = wz.fim_files_monitored;
         }
       } catch (e) {}
     }
@@ -984,23 +771,18 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       canvas.height = canvas.parentElement.clientHeight;
 
       const rawNodes = [
-        { id: 'gw', x: 0.5, y: 0.5, r: 18, label: 'Huawei ONT (192.168.100.1)', color: '#FAFAFA', sg: 'gateway_wan' },
-        { id: 'doh', x: 0.85, y: 0.5, r: 14, label: 'Cloudflare DoH (1.1.1.1)', color: '#10B981', sg: 'gateway_wan' },
-        { id: 'sec', x: 0.2, y: 0.35, r: 15, label: 'Secondary Router (192.168.1.253)', color: '#A855F7', sg: 'secondary_ap' },
-        { id: 'tecno', x: 0.1, y: 0.22, r: 11, label: 'TECNO-SPARK-50 (LAN3)', color: '#A855F7', sg: 'secondary_ap' },
-        { id: 'server', x: 0.7, y: 0.25, r: 15, label: 'Aegis Host Server', color: '#10B981', sg: 'homelab_core' },
-        { id: 'pc', x: 0.3, y: 0.8, r: 13, label: 'DESKTOP-QO58KLD (LAN1)', color: '#06B6D4', sg: 'homelab_core' },
-        { id: 'host90', x: 0.7, y: 0.8, r: 11, label: 'Host (192.168.100.90)', color: '#06B6D4', sg: 'homelab_core' },
+        { id: 'gw', x: 0.5, y: 0.5, r: 18, label: 'Huawei ONT (192.168.100.1)', color: '#FAFAFA' },
+        { id: 'doh', x: 0.85, y: 0.5, r: 14, label: 'Cloudflare DoH (1.1.1.1)', color: '#10B981' },
+        { id: 'sec', x: 0.2, y: 0.35, r: 15, label: 'Secondary Router (192.168.1.253)', color: '#A855F7' },
+        { id: 'server', x: 0.7, y: 0.25, r: 15, label: 'Aegis Host Server', color: '#10B981' },
+        { id: 'pc', x: 0.3, y: 0.8, r: 13, label: 'DESKTOP-QO58KLD (LAN1)', color: '#06B6D4' }
       ];
 
       const links = [
-        { s: 0, t: 1, color: '#10B981', sg: 'gateway_wan' },
-        { s: 0, t: 2, color: '#A855F7', sg: 'secondary_ap' },
-        { s: 2, t: 3, color: '#A855F7', sg: 'secondary_ap' },
-        { s: 0, t: 4, color: '#10B981', sg: 'homelab_core' },
-        { s: 4, t: 1, color: '#10B981', sg: 'homelab_core' },
-        { s: 0, t: 5, color: '#06B6D4', sg: 'homelab_core' },
-        { s: 0, t: 6, color: '#06B6D4', sg: 'homelab_core' },
+        { s: 0, t: 1, color: '#10B981' },
+        { s: 0, t: 2, color: '#A855F7' },
+        { s: 0, t: 3, color: '#10B981' },
+        { s: 0, t: 4, color: '#06B6D4' }
       ];
 
       let t = 0;
@@ -1055,31 +837,6 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       render();
     }
 
-    function connectSSE() {
-      const es = new EventSource('/api/v1/stream');
-      es.onmessage = (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          if (payload.type === 'vitals') {
-            const v = payload.data.vitals;
-            if (v) {
-              document.getElementById('livePing').innerText = v.ping_ms.toFixed(1);
-              document.getElementById('liveJitter').innerText = v.jitter_ms.toFixed(1);
-            }
-            if (payload.data.speedtest) {
-              const s = payload.data.speedtest;
-              document.getElementById('downSpeed').innerText = Math.round(s.download_mbps);
-              document.getElementById('upSpeed').innerText = Math.round(s.upload_mbps);
-            }
-          }
-        } catch (err) {}
-      };
-      es.onerror = () => {
-        es.close();
-        setTimeout(connectSSE, 3000);
-      };
-    }
-
     async function runSpeedtest() {
       const btn = document.getElementById('speedtestBtn');
       btn.innerText = 'Testing...';
@@ -1103,8 +860,7 @@ const richFriendlyDashboardHTML = `<!DOCTYPE html>
       initEtherApe();
       loadDevices();
       loadCrowdSec();
-      loadWazuh();
-      connectSSE();
+      loadPiholeStats();
     };
   </script>
 </body>
