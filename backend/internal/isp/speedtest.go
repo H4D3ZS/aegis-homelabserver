@@ -68,7 +68,7 @@ func NewSpeedtestRunner(store *db.Store, incMgr *IncidentManager, contractedDown
 			PingMs:       7.0,
 			JitterMs:     1.5,
 			ISP:          ispName,
-			Degraded:     false,
+			IsDegraded:   false,
 		},
 	}
 }
@@ -106,7 +106,7 @@ func (sr *SpeedtestRunner) Execute(ctx context.Context) (*db.SpeedRecord, error)
 			PingMs:       7.2,
 			JitterMs:     1.4,
 			ISP:          sr.ISPName,
-			Degraded:     false,
+			IsDegraded:   false,
 		}
 	}
 
@@ -115,11 +115,11 @@ func (sr *SpeedtestRunner) Execute(ctx context.Context) (*db.SpeedRecord, error)
 	sr.mu.Unlock()
 
 	if sr.Store != nil {
-		_ = sr.Store.RecordSpeedtest(rec)
+		_ = sr.Store.SaveSpeedRecord(rec)
 	}
 
 	log.Printf("[SPEEDTEST] Result: %.1f Mbps Down / %.1f Mbps Up / %.1f ms Ping (Degraded=%v)",
-		rec.DownloadMbps, rec.UploadMbps, rec.PingMs, rec.Degraded)
+		rec.DownloadMbps, rec.UploadMbps, rec.PingMs, rec.IsDegraded)
 
 	return rec, nil
 }
@@ -155,7 +155,7 @@ func (sr *SpeedtestRunner) runOoklaOrCLI(ctx context.Context) (*db.SpeedRecord, 
 			JitterMs:     ookla.Ping.Jitter,
 			ISP:          ookla.ISP,
 			ServerName:   ookla.Server.Name,
-			Degraded:     degraded,
+			IsDegraded:   degraded,
 		}, nil
 	}
 
@@ -182,7 +182,7 @@ func (sr *SpeedtestRunner) runOoklaOrCLI(ctx context.Context) (*db.SpeedRecord, 
 			JitterMs:     1.5,
 			ISP:          legacy.Client.ISP,
 			ServerName:   legacy.Server.Name,
-			Degraded:     degraded,
+			IsDegraded:   degraded,
 		}, nil
 	}
 
