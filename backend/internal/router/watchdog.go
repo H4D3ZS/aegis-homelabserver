@@ -89,20 +89,23 @@ func (c *RouterClient) ProcessWatchdogTick(ctx context.Context, gatewayUp, upstr
 	}
 }
 
-// GetStatus returns the operational status of the router.
+// GetStatus returns the operational status and thermal diagnostics of the router.
 func (c *RouterClient) GetStatus(ctx context.Context) RouterStatus {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	thermal := c.Driver.ScrapeThermalAndOptical(ctx)
 
 	return RouterStatus{
 		IsConnected:      true,
 		WANIP:            "180.191.42.10",
 		GatewayIP:        c.Config.GatewayURL,
 		ConnectionUptime: "4d 18h 22m",
-		SignalQuality:    "Rx: -19.2 dBm | Tx: +2.4 dBm (GPON Normal)",
+		SignalQuality:    fmt.Sprintf("Rx: %.1f dBm | Tx: +%.1f dBm (GPON Normal)", thermal.RxOpticalPowerDBm, thermal.TxOpticalPowerDBm),
 		DHCPClientsCount: 13,
 		LastRebootTime:   c.lastRebootTime,
 		AutoHealActive:   c.Config.AutoHeal,
 		RouterModel:      "Converge ICT Primary ONT (Huawei EG8041X6-10)",
+		ThermalHealth:    thermal,
 	}
 }
